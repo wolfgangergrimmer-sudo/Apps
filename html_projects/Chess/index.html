@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVOLVED CHESS — Command Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   GLOBAL BASE
+═══════════════════════════════════════════════ */
+:root {
+  --bg:#050508; --bg2:#0a0a12; --bg3:#0f0f1a; --panel:#0d0d18;
+  --border:#1a1a30; --accent:#00f0ff; --accent2:#ff2060;
+  --accent3:#a020f0; --accent4:#ffcc00; --green:#00ff88;
+  --orange:#ff6820; --white-piece:#e8e8ff;
+  --tile-light:#1c1c2e; --tile-dark:#111120;
+  --glow:0 0 20px rgba(0,240,255,0.4);
+  --glow-red:0 0 20px rgba(255,32,96,0.5);
+  --glow-orange:0 0 20px rgba(255,104,32,0.5);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:#ccc;font-family:'Rajdhani',sans-serif;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:9999;}
+.hidden{display:none!important;}
+
+/* ═══════════════════════════════════════════════
+   LANDING HUB
+═══════════════════════════════════════════════ */
+#hub{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+.hub-bg{position:absolute;inset:0;overflow:hidden;}
+.hub-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,240,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.03) 1px,transparent 1px);background-size:60px 60px;animation:grid-drift 20s linear infinite;}
+@keyframes grid-drift{to{background-position:60px 60px;}}
+.hub-glow1{position:absolute;top:-20%;left:-10%;width:60%;height:60%;background:radial-gradient(circle,rgba(0,240,255,0.06) 0%,transparent 70%);animation:float1 8s ease-in-out infinite;}
+.hub-glow2{position:absolute;bottom:-20%;right:-10%;width:50%;height:50%;background:radial-gradient(circle,rgba(255,32,96,0.05) 0%,transparent 70%);animation:float2 10s ease-in-out infinite;}
+@keyframes float1{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,-20px);}}
+@keyframes float2{0%,100%{transform:translate(0,0);}50%{transform:translate(-20px,30px);}}
+
+.hub-content{position:relative;text-align:center;max-width:800px;padding:40px 20px;}
+.hub-logo{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,3.5rem);font-weight:900;letter-spacing:6px;background:linear-gradient(90deg,var(--accent),var(--accent3),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;animation:logo-glow 3s ease-in-out infinite alternate;}
+@keyframes logo-glow{from{filter:drop-shadow(0 0 20px rgba(0,240,255,0.3));}to{filter:drop-shadow(0 0 40px rgba(160,32,240,0.4));}}
+.hub-sub{font-family:'Share Tech Mono',monospace;font-size:0.75rem;letter-spacing:4px;color:#333;margin-bottom:60px;text-transform:uppercase;}
+
+.hub-cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+.hub-card{width:280px;border:1px solid var(--border);background:rgba(255,255,255,0.02);padding:28px 24px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.3s;text-align:left;}
+.hub-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.3s;}
+.hub-card:hover{transform:translateY(-4px);}
+.hub-card:hover::before{opacity:1;}
+
+.card-evolved::before{background:linear-gradient(135deg,rgba(0,240,255,0.06),transparent);}
+.card-evolved:hover{border-color:rgba(0,240,255,0.4);box-shadow:0 0 30px rgba(0,240,255,0.1);}
+.card-collapse::before{background:linear-gradient(135deg,rgba(255,104,32,0.08),transparent);}
+.card-collapse:hover{border-color:rgba(255,104,32,0.4);box-shadow:0 0 30px rgba(255,104,32,0.12);}
+
+.card-icon{font-size:2.5rem;margin-bottom:16px;display:block;}
+.card-title{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;letter-spacing:3px;margin-bottom:8px;}
+.card-evolved .card-title{color:var(--accent);}
+.card-collapse .card-title{color:var(--orange);}
+.card-desc{font-size:0.72rem;color:#555;line-height:1.7;margin-bottom:20px;font-family:'Share Tech Mono',monospace;}
+.card-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{font-size:0.55rem;padding:3px 8px;letter-spacing:1px;font-family:'Orbitron',sans-serif;}
+.tag-cyan{border:1px solid rgba(0,240,255,0.3);color:rgba(0,240,255,0.6);}
+.tag-orange{border:1px solid rgba(255,104,32,0.3);color:rgba(255,104,32,0.6);}
+.tag-purple{border:1px solid rgba(160,32,240,0.3);color:rgba(160,32,240,0.6);}
+.tag-red{border:1px solid rgba(255,32,96,0.3);color:rgba(255,32,96,0.6);}
+
+.card-arrow{position:absolute;bottom:20px;right:20px;font-size:1.2rem;opacity:0.2;transition:all 0.3s;}
+.hub-card:hover .card-arrow{opacity:1;transform:translateX(4px);}
+
+.hub-footer{font-family:'Share Tech Mono',monospace;font-size:0.55rem;letter-spacing:3px;color:#222;}
+
+/* ═══════════════════════════════════════════════
+   SHARED HEADER
+═══════════════════════════════════════════════ */
+#game-header{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.header-logo{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:3px;}
+.header-logo span{font-size:0.5rem;display:block;letter-spacing:6px;color:#444;margin-top:-3px;}
+.header-stats{display:flex;gap:20px;align-items:center;}
+.hstat{text-align:center;}
+.hstat-val{font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--accent);}
+.hstat-label{font-size:0.55rem;letter-spacing:2px;color:#444;text-transform:uppercase;}
+.btn-hdr{background:transparent;border:1px solid #2a2a3a;color:#555;font-family:'Orbitron',sans-serif;font-size:0.55rem;padding:5px 12px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+.btn-hdr:hover{border-color:var(--accent);color:var(--accent);}
+.btn-hdr.red:hover{border-color:var(--accent2);color:var(--accent2);}
+.ai-thinking{display:none;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#555;}
+.ai-thinking.active{display:flex;}
+.ai-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent3);margin:0 1px;animation:dot-bounce 0.8s ease infinite;}
+.ai-dots span:nth-child(2){animation-delay:.15s;}
+.ai-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes dot-bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+
+/* ═══════════════════════════════════════════════
+   SHARED GAME LAYOUT
+═══════════════════════════════════════════════ */
+#game-shell{flex:1;display:flex;overflow:hidden;}
+.left-panel,.right-panel{width:200px;flex-shrink:0;background:var(--panel);padding:14px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.left-panel{border-right:1px solid var(--border);}
+.right-panel{border-left:1px solid var(--border);width:220px;}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:0.5rem;letter-spacing:3px;color:#333;text-transform:uppercase;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.board-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.board-wrap{position:relative;}
+.coord-row{display:flex;justify-content:space-around;padding:0 32px;font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#2a2a3a;}
+.coord-col{position:absolute;left:0;top:32px;display:flex;flex-direction:column;justify-content:space-around;height:calc(100% - 64px);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#2a2a3a;width:26px;text-align:center;}
+
+/* ═══════════════════════════════════════════════
+   BOARD & TILES
+═══════════════════════════════════════════════ */
+#board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:min(58vh,540px);height:min(58vh,540px);border:1px solid #1a1a2a;position:relative;}
+.tile{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:background 0.2s;}
+.tile.light{background:var(--tile-light);}
+.tile.dark{background:var(--tile-dark);}
+.tile.selected{background:rgba(0,240,255,0.18)!important;box-shadow:inset 0 0 20px rgba(0,240,255,0.3);}
+.tile.valid-move::before{content:'';position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(0,240,255,0.55);box-shadow:0 0 12px rgba(0,240,255,0.7);z-index:2;}
+.tile.valid-capture::before{content:'';position:absolute;inset:3px;border:2px solid rgba(255,32,96,0.8);box-shadow:inset 0 0 10px rgba(255,32,96,0.3);z-index:2;}
+.tile.last-move{background:rgba(255,204,0,0.07)!important;}
+.tile.in-check{background:rgba(255,32,96,0.28)!important;animation:chk-pulse 0.6s ease infinite alternate;}
+@keyframes chk-pulse{from{background:rgba(255,32,96,0.18);}to{background:rgba(255,32,96,0.38);}}
+
+/* ─── PIECES ─── */
+.piece{position:absolute;z-index:3;font-size:clamp(22px,4.2vh,38px);line-height:1;cursor:pointer;user-select:none;transition:transform 0.15s,filter 0.3s;text-shadow:0 2px 8px rgba(0,0,0,0.9);}
+.piece:hover{transform:scale(1.12);}
+.piece.wp{color:#e8e8ff;}
+.piece.bp{color:#8888cc;}
+.piece[data-tier="2"]{filter:drop-shadow(0 0 5px var(--accent));animation:pt2 2s ease infinite alternate;}
+.piece[data-tier="3"]{filter:drop-shadow(0 0 9px var(--accent4));animation:pt3 1.4s ease infinite alternate;}
+.piece[data-tier="4"]{filter:drop-shadow(0 0 13px var(--accent2)) drop-shadow(0 0 4px var(--accent3));animation:pt4 0.9s ease infinite alternate;}
+@keyframes pt2{from{filter:drop-shadow(0 0 3px var(--accent));}to{filter:drop-shadow(0 0 8px var(--accent));}}
+@keyframes pt3{from{filter:drop-shadow(0 0 6px var(--accent4));}to{filter:drop-shadow(0 0 15px var(--accent4));}}
+@keyframes pt4{from{filter:drop-shadow(0 0 10px var(--accent2));}to{filter:drop-shadow(0 0 22px var(--accent3));}}
+.tier-badge{position:absolute;bottom:1px;right:2px;font-family:'Share Tech Mono',monospace;font-size:0.42rem;font-weight:bold;z-index:5;pointer-events:none;}
+.t1{color:#2a2a3a;}.t2{color:var(--accent);}.t3{color:var(--accent4);}.t4{color:var(--accent2);text-shadow:0 0 6px var(--accent2);}
+.age-c{position:absolute;top:1px;left:2px;font-family:'Share Tech Mono',monospace;font-size:0.38rem;color:#2a2a3a;z-index:5;pointer-events:none;}
+
+/* ─── INFLUENCE ZONES (Evolved) ─── */
+.tile.iz-green::after{content:'';position:absolute;inset:0;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.18);pointer-events:none;}
+.tile.iz-red::after{content:'';position:absolute;inset:0;background:rgba(255,32,96,0.09);border:1px solid rgba(255,32,96,0.22);pointer-events:none;}
+.tile.iz-purple::after{content:'';position:absolute;inset:0;background:rgba(160,32,240,0.09);border:1px solid rgba(160,32,240,0.22);pointer-events:none;}
+
+/* ─── COLLAPSE ZONES ─── */
+.tile.collapse-warn{animation:cw-anim 0.5s ease infinite alternate;}
+@keyframes cw-anim{from{background:rgba(255,104,32,0.15);}to{background:rgba(255,32,96,0.25);}}
+.tile.collapse-warn::after{content:'⚠';position:absolute;font-size:0.5rem;color:var(--orange);top:2px;right:2px;z-index:6;animation:cw-anim 0.5s ease infinite alternate;pointer-events:none;}
+.tile.collapse-imminent{animation:ci-anim 0.25s ease infinite alternate;}
+@keyframes ci-anim{from{background:rgba(255,32,96,0.35);}to{background:rgba(255,100,0,0.5);}}
+.tile.collapse-imminent::after{content:'💥';position:absolute;font-size:0.55rem;top:1px;right:1px;z-index:6;pointer-events:none;}
+.tile.collapsed{background:#0a0005!important;cursor:not-allowed;}
+.tile.collapsed::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(80,0,0,0.2) 4px,rgba(80,0,0,0.2) 8px);pointer-events:none;}
+
+/* ─── FOG OF WAR ─── */
+.tile.fog-hidden{background:#050507!important;cursor:default;}
+.tile.fog-hidden *{visibility:hidden!important;}
+.tile.fog-hidden::after{content:'';position:absolute;inset:0;background:rgba(5,5,10,0.92);z-index:10;pointer-events:none;}
+.tile.fog-hidden.collapse-warn::after,.tile.fog-hidden.collapse-imminent::after{background:rgba(5,5,10,0.6);z-index:10;}
+.tile.fog-partial{background:var(--tile-dark)!important;}
+.tile.fog-partial::after{content:'';position:absolute;inset:0;background:rgba(5,5,10,0.55);z-index:10;pointer-events:none;backdrop-filter:blur(1px);}
+
+/* Fog collapse warning bleed-through */
+.tile.fog-hidden.collapse-warn{animation:fog-cw 0.7s ease infinite alternate;}
+@keyframes fog-cw{from{background:#050507;}to{background:rgba(60,10,0,0.8);}}
+
+/* ─── BOTTOM BAR ─── */
+#game-bottom{height:44px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:12px;}
+.turn-ind{display:flex;align-items:center;gap:10px;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:2px;}
+.turn-dot{width:10px;height:10px;border-radius:50%;transition:all 0.3s;}
+.td-w{background:var(--white-piece);box-shadow:0 0 8px rgba(232,232,255,0.6);}
+.td-b{background:#8888cc;box-shadow:0 0 8px rgba(136,136,204,0.6);}
+.status-msg{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:1px;flex:1;text-align:center;}
+.controls{display:flex;gap:6px;}
+.btn{background:transparent;border:1px solid #2a2a3a;color:#555;font-family:'Orbitron',sans-serif;font-size:0.5rem;padding:5px 9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,240,255,0.05);}
+
+/* ─── RIGHT PANEL ELEMENTS ─── */
+.move-log{flex:1;overflow-y:auto;min-height:80px;max-height:180px;border:1px solid var(--border);padding:8px;font-family:'Share Tech Mono',monospace;font-size:0.57rem;display:flex;flex-direction:column-reverse;gap:2px;scrollbar-width:thin;scrollbar-color:#1a1a30 transparent;}
+.log-entry{color:#444;}
+.log-entry.latest{color:#999;}
+.log-entry.capture{color:var(--accent2);}
+.log-entry.tier-up{color:var(--accent4);}
+.log-entry.chain{color:var(--accent3);}
+.log-entry.check{color:var(--accent);}
+.log-entry.collapse{color:var(--orange);}
+.tension-bar-bg{height:5px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:3px;overflow:hidden;}
+.tension-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--accent4),var(--accent2));transition:width 0.5s ease;}
+.tension-lbl{display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.55rem;letter-spacing:1px;}
+.phase-badge{font-family:'Orbitron',sans-serif;font-size:0.5rem;text-align:center;margin-top:5px;padding:3px 6px;border-radius:2px;}
+.ph-early{color:var(--green);border:1px solid rgba(0,255,136,0.25);}
+.ph-mid{color:var(--accent4);border:1px solid rgba(255,204,0,0.25);}
+.ph-late{color:var(--accent2);border:1px solid rgba(255,32,96,0.25);animation:ph-flash 0.7s ease infinite alternate;}
+@keyframes ph-flash{to{box-shadow:0 0 10px rgba(255,32,96,0.35);}}
+.power-list{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;}
+.pi{display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid var(--border);font-size:0.6rem;background:rgba(255,255,255,0.015);}
+.pi-icon{font-size:1rem;flex-shrink:0;}
+.pi-info{flex:1;min-width:0;}
+.pi-name{font-size:0.55rem;color:#888;}
+.pi-bar{height:3px;background:#111;border-radius:2px;margin-top:3px;overflow:hidden;}
+.pi-fill{height:100%;border-radius:2px;}
+.pf1{background:#2a2a3a;width:25%}.pf2{background:var(--accent);width:50%}.pf3{background:var(--accent4);width:75%}.pf4{background:var(--accent2);width:100%;animation:pf4p .8s ease infinite alternate;}
+@keyframes pf4p{to{box-shadow:0 0 6px var(--accent2);}}
+.cap-list{display:flex;flex-wrap:wrap;gap:3px;min-height:36px;}
+.cap-p{font-size:1.1rem;opacity:0.45;}
+.collapse-countdown{font-family:'Orbitron',monospace;font-size:0.6rem;border:1px solid rgba(255,104,32,0.3);padding:4px 8px;color:var(--orange);text-align:center;}
+.fog-legend{font-size:0.58rem;font-family:'Share Tech Mono',monospace;line-height:2;}
+
+/* ─── FX LAYER ─── */
+#fx-layer{position:fixed;inset:0;pointer-events:none;z-index:1000;overflow:hidden;}
+.fx-p{position:absolute;border-radius:50%;pointer-events:none;animation:pfade 0.8s ease-out forwards;}
+@keyframes pfade{0%{transform:scale(1) translate(0,0);opacity:1;}100%{transform:scale(0) translate(var(--dx),var(--dy));opacity:0;}}
+.fx-flash{position:absolute;inset:0;background:radial-gradient(circle at var(--cx) var(--cy),rgba(255,32,96,0.35) 0%,transparent 60%);animation:flout 0.35s ease-out forwards;pointer-events:none;}
+@keyframes flout{to{opacity:0;}}
+.fx-collapse{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,104,32,0.8),transparent);pointer-events:none;animation:colexp 0.6s ease-out forwards;}
+@keyframes colexp{0%{transform:scale(0);opacity:1;}100%{transform:scale(4);opacity:0;}}
+
+/* ─── OVERLAYS ─── */
+.overlay{position:fixed;inset:0;z-index:2000;background:rgba(5,5,8,0.93);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+.ov-box{border:1px solid var(--border);background:var(--bg2);padding:36px 52px;text-align:center;max-width:500px;width:92%;position:relative;}
+.ov-box::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,240,255,0.02),transparent,rgba(255,32,96,0.02));pointer-events:none;}
+.ov-title{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;letter-spacing:4px;background:linear-gradient(90deg,var(--accent),var(--accent3),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px;}
+.ov-title.orange{background:linear-gradient(90deg,var(--orange),var(--accent4),var(--accent2));-webkit-background-clip:text;}
+.ov-sub{font-size:0.75rem;color:#555;letter-spacing:2px;margin-bottom:28px;line-height:1.9;font-family:'Share Tech Mono',monospace;}
+.ov-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px;}
+.btn-prim{background:linear-gradient(90deg,rgba(0,240,255,0.08),rgba(160,32,240,0.08));border:1px solid var(--accent);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:0.65rem;padding:11px 24px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+.btn-prim:hover{background:rgba(0,240,255,0.14);box-shadow:var(--glow);}
+.btn-prim.orange{border-color:var(--orange);color:var(--orange);background:linear-gradient(90deg,rgba(255,104,32,0.08),rgba(255,32,96,0.08));}
+.btn-prim.orange:hover{box-shadow:var(--glow-orange);}
+.btn-sec{background:transparent;border:1px solid #252535;color:#555;font-family:'Orbitron',sans-serif;font-size:0.65rem;padding:11px 24px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+.btn-sec:hover{border-color:#444;color:#888;}
+.mode-sel{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+.mode-btn{padding:9px 18px;border:1px solid #222;color:#555;font-family:'Orbitron',sans-serif;font-size:0.58rem;cursor:pointer;transition:all 0.2s;letter-spacing:1px;background:transparent;}
+.mode-btn.sel{border-color:var(--accent3);color:var(--accent3);background:rgba(160,32,240,0.07);}
+.mode-btn.sel-o{border-color:var(--orange);color:var(--orange);background:rgba(255,104,32,0.07);}
+.depth-row{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+.db{padding:7px 14px;border:1px solid #1a1a2a;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.62rem;cursor:pointer;background:transparent;transition:all 0.2s;}
+.db.sel{border-color:var(--accent);color:var(--accent);background:rgba(0,240,255,0.05);}
+.db.sel-o{border-color:var(--orange);color:var(--orange);}
+
+/* Popups */
+.chain-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1500;pointer-events:none;font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:var(--accent3);text-shadow:0 0 30px var(--accent3),0 0 60px var(--accent3);animation:cpop 1.2s ease-out forwards;letter-spacing:4px;}
+.collapse-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1500;pointer-events:none;font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;color:var(--orange);text-shadow:0 0 30px var(--orange);animation:cpop 1.2s ease-out forwards;letter-spacing:3px;}
+@keyframes cpop{0%{transform:translate(-50%,-50%) scale(0.4);opacity:0;}20%{transform:translate(-50%,-50%) scale(1.2);opacity:1;}60%{transform:translate(-50%,-65%) scale(1);opacity:1;}100%{transform:translate(-50%,-80%) scale(0.8);opacity:0;}}
+.tier-popup{position:fixed;z-index:1500;pointer-events:none;font-family:'Orbitron',sans-serif;font-size:0.75rem;font-weight:700;padding:5px 14px;background:rgba(0,0,0,0.85);border:1px solid var(--accent4);color:var(--accent4);letter-spacing:2px;animation:trise 1.5s ease-out forwards;white-space:nowrap;}
+@keyframes trise{0%{opacity:0;transform:translateY(0);}15%{opacity:1;}70%{opacity:1;transform:translateY(-40px);}100%{opacity:0;transform:translateY(-70px);}}
+
+.promo-ov{position:fixed;inset:0;z-index:3000;background:rgba(5,5,8,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
+.promo-box{background:var(--bg2);border:1px solid var(--border);padding:24px;text-align:center;}
+.promo-title{font-family:'Orbitron',sans-serif;font-size:0.75rem;letter-spacing:3px;color:var(--accent4);margin-bottom:16px;}
+.promo-choices{display:flex;gap:12px;justify-content:center;}
+.promo-btn{font-size:1.8rem;cursor:pointer;padding:7px;border:1px solid #222;transition:all 0.2s;background:transparent;}
+.promo-btn:hover{border-color:var(--accent4);background:rgba(255,204,0,0.06);}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:#1a1a30;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HUB ═══════════════ -->
+<div id="hub">
+  <div class="hub-bg">
+    <div class="hub-grid"></div>
+    <div class="hub-glow1"></div>
+    <div class="hub-glow2"></div>
+  </div>
+  <div class="hub-content">
+    <div class="hub-logo">EVOLVED CHESS</div>
+    <div class="hub-sub">SELECT YOUR BATTLEFIELD</div>
+
+    <div class="hub-cards">
+      <!-- EVOLVED CHESS CARD -->
+      <div class="hub-card card-evolved" onclick="launchEvolved()">
+        <span class="card-icon">♟</span>
+        <div class="card-title">EVOLVED CHESS</div>
+        <div class="card-desc">
+          Pieces age and evolve across 4 tiers.<br>
+          Chain reactions. Influence zones.<br>
+          Every piece feels alive.
+        </div>
+        <div class="card-tags">
+          <span class="tag tag-cyan">TIER SYSTEM</span>
+          <span class="tag tag-purple">CHAIN REACTIONS</span>
+          <span class="tag tag-cyan">INFLUENCE ZONES</span>
+          <span class="tag tag-purple">AI OPPONENT</span>
+        </div>
+        <span class="card-arrow">→</span>
+      </div>
+
+      <!-- COLLAPSE CHESS CARD -->
+      <div class="hub-card card-collapse" onclick="launchCollapse()">
+        <span class="card-icon" style="filter:drop-shadow(0 0 8px var(--orange))">♜</span>
+        <div class="card-title">COLLAPSE CHESS</div>
+        <div class="card-desc">
+          The board is dying beneath you.<br>
+          Fog hides your enemies.<br>
+          Tiles collapse. Nowhere is safe.
+        </div>
+        <div class="card-tags">
+          <span class="tag tag-orange">COLLAPSE ZONES</span>
+          <span class="tag tag-red">FOG OF WAR</span>
+          <span class="tag tag-orange">ESCALATION</span>
+          <span class="tag tag-red">PSYCHOLOGICAL</span>
+        </div>
+        <span class="card-arrow" style="color:var(--orange)">→</span>
+      </div>
+    </div>
+
+    <div class="hub-footer">CHOOSE WISELY — BOTH BOARDS WANT YOU DEAD</div>
+  </div>
+</div>
+
+<!-- ═══════════════ GAME SHELL (shared) ═══════════════ -->
+<header id="game-header" class="hidden">
+  <div class="header-logo" id="hdr-logo">EVOLVED CHESS <span id="hdr-sub">SYSTEM OVERLOAD</span></div>
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-val" id="h-turn">1</div><div class="hstat-label">TURN</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-wcap">0</div><div class="hstat-label">W CAPTURES</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-bcap">0</div><div class="hstat-label">B CAPTURES</div></div>
+    <div class="ai-thinking" id="ai-ind"><span>AI COMPUTING</span><span class="ai-dots"><span></span><span></span><span></span></span></div>
+    <button class="btn-hdr" onclick="backToHub()">← HUB</button>
+    <button class="btn-hdr red" onclick="resetCurrentGame()">⟳ RESET</button>
+  </div>
+</header>
+
+<div id="game-shell" class="hidden">
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="panel-title">Black Captured</div>
+    <div class="cap-list" id="b-cap-list"></div>
+    <div class="panel-title">White Captured</div>
+    <div class="cap-list" id="w-cap-list"></div>
+    <div class="panel-title" id="lp-section-title">TIER LEGEND</div>
+    <div id="lp-section-body" style="font-size:0.58rem;line-height:2;font-family:'Share Tech Mono',monospace;">
+      <div style="color:#2a2a3a">T1 · NORMAL</div>
+      <div style="color:var(--accent)">T2 · ENHANCED</div>
+      <div style="color:var(--accent4)">T3 · POWERFUL</div>
+      <div style="color:var(--accent2)">T4 · UNSTABLE</div>
+    </div>
+  </div>
+
+  <!-- BOARD AREA -->
+  <div class="board-area">
+    <div class="board-wrap">
+      <div class="coord-row" id="cr-top"></div>
+      <div style="display:flex">
+        <div class="coord-col" id="cr-left"></div>
+        <div id="board"></div>
+      </div>
+      <div class="coord-row" id="cr-bot"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="panel-title">GAME TENSION</div>
+    <div>
+      <div class="tension-lbl"><span style="color:#333;font-size:0.5rem">CALM</span><span style="color:#333;font-size:0.5rem">OVERLOAD</span></div>
+      <div class="tension-bar-bg"><div class="tension-fill" id="tens-fill" style="width:5%"></div></div>
+      <div class="phase-badge ph-early" id="phase-lbl">EARLY GAME</div>
+    </div>
+    <div id="rp-extra"></div>
+    <div class="panel-title">MOVE LOG</div>
+    <div class="move-log" id="move-log"></div>
+    <div class="panel-title">ACTIVE EFFECTS</div>
+    <div id="effects-list" style="font-size:0.58rem;color:#333;font-family:'Share Tech Mono',monospace;line-height:1.9;"></div>
+  </div>
+</div>
+
+<div id="game-bottom" class="hidden">
+  <div class="turn-ind">
+    <div class="turn-dot td-w" id="turn-dot"></div>
+    <span id="turn-txt" style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:2px;">WHITE TO MOVE</span>
+  </div>
+  <div class="status-msg" id="status-msg">GAME IN PROGRESS</div>
+  <div class="controls">
+    <button class="btn" id="btn-zones" onclick="toggleZones()">ZONES</button>
+    <button class="btn" id="btn-fog" onclick="toggleFogDebug()" style="display:none">FOG DBG</button>
+    <button class="btn" onclick="undoMove()">UNDO</button>
+  </div>
+</div>
+
+<!-- FX -->
+<div id="fx-layer"></div>
+
+<!-- ── EVOLVED CHESS START OVERLAY ── -->
+<div class="overlay hidden" id="ov-evolved">
+  <div class="ov-box">
+    <div class="ov-title">EVOLVED CHESS</div>
+    <div class="ov-sub">PIECES AGE · POWERS ESCALATE · SYSTEMS OVERLOAD<br>EVERY MOVE CARRIES WEIGHT</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#333;margin-bottom:14px;letter-spacing:2px;">SELECT MODE</div>
+    <div class="mode-sel">
+      <button class="mode-btn sel" id="ev-pvai" onclick="evSelectMode('pvai')">VS AI</button>
+      <button class="mode-btn" id="ev-pvp" onclick="evSelectMode('pvp')">2 PLAYER</button>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#333;margin-bottom:10px;letter-spacing:2px;">AI DIFFICULTY</div>
+    <div class="depth-row" id="ev-depth-row">
+      <button class="db" onclick="evSelDepth(1)">NOVICE</button>
+      <button class="db sel" onclick="evSelDepth(2)">STANDARD</button>
+      <button class="db" onclick="evSelDepth(3)">EXPERT</button>
+    </div>
+    <div class="ov-btns">
+      <button class="btn-prim" onclick="startEvolved()">INITIALIZE SYSTEM</button>
+      <button class="btn-sec" onclick="backToHub()">← BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── COLLAPSE CHESS START OVERLAY ── -->
+<div class="overlay hidden" id="ov-collapse">
+  <div class="ov-box">
+    <div class="ov-title orange">COLLAPSE CHESS</div>
+    <div class="ov-sub">THE BOARD CRUMBLES · FOG HIDES THREATS<br>NOWHERE IS SAFE · NOWHERE IS CERTAIN</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#333;margin-bottom:14px;letter-spacing:2px;">SELECT MODE</div>
+    <div class="mode-sel">
+      <button class="mode-btn sel-o" id="cl-pvai" onclick="clSelectMode('pvai')">VS AI</button>
+      <button class="mode-btn" id="cl-pvp" onclick="clSelectMode('pvp')">2 PLAYER</button>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#333;margin-bottom:10px;letter-spacing:2px;">AI DIFFICULTY</div>
+    <div class="depth-row" id="cl-depth-row">
+      <button class="db" onclick="clSelDepth(1)">NOVICE</button>
+      <button class="db sel-o" onclick="clSelDepth(2)">STANDARD</button>
+      <button class="db" onclick="clSelDepth(3)">EXPERT</button>
+    </div>
+    <div class="ov-btns">
+      <button class="btn-prim orange" onclick="startCollapse()">ENTER THE VOID</button>
+      <button class="btn-sec" onclick="backToHub()">← BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="overlay hidden" id="ov-gameover">
+  <div class="ov-box">
+    <div class="ov-title" id="go-title">CHECKMATE</div>
+    <div class="ov-sub" id="go-sub">SYSTEM COLLAPSE</div>
+    <div class="ov-btns">
+      <button class="btn-prim" id="go-replay" onclick="resetCurrentGame()">PLAY AGAIN</button>
+      <button class="btn-sec" onclick="backToHub()">← HUB</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════
+//  SHARED CHESS ENGINE
+// ═══════════════════════════════════════════════════════════
+const GLYPHS = {K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const VALS   = {P:100,N:320,B:330,R:500,Q:900,K:20000};
+
+// shared state
+let G = {}; // game object — reset per game
+
+function newG() {
+  return {
+    board: [], pieceStates:{}, turn:'w',
+    selected:null, validMoves:[],
+    moveHistory:[], boardHistory:[],
+    capW:[], capB:[],
+    enPassant:null, castling:{wK:true,wQ:true,bK:true,bQ:true},
+    turnNum:0, lastMove:null, inCheck:false,
+    gameActive:false, aiWorking:false,
+    // mode
+    mode:'pvai', aiDepth:2, gameType:'evolved',
+    // evolved
+    tierHistory:{}, showZones:true,
+    // collapse (initCollapseZones() sets the real values)
+    collapseZones:[], fogEnabled:true, fogDebug:false,
+    collapseInterval:8, nextCollapseAt:10, collapseCount:1,
+  };
+}
+
+// ── utils ──
+const isW  = p => p && p === p.toUpperCase();
+const tp   = p => p && p.toUpperCase();
+const col  = p => p ? (isW(p)?'w':'b') : null;
+const opp  = c => c==='w'?'b':'w';
+
+// ── board init ──
+function initBoard() {
+  const order = ['R','N','B','Q','K','B','N','R'];
+  G.board = Array.from({length:8},()=>Array(8).fill(null));
+  for(let c=0;c<8;c++) G.board[0][c] = order[c].toLowerCase();
+  for(let c=0;c<8;c++) G.board[1][c] = 'p';
+  for(let c=0;c<8;c++) G.board[6][c] = 'P';
+  for(let c=0;c<8;c++) G.board[7][c] = order[c];
+  G.pieceStates = {};
+  G.enPassant = null;
+  G.castling = {wK:true,wQ:true,bK:true,bQ:true};
+  G.turnNum = 0; G.lastMove = null; G.inCheck = false;
+  G.capW=[]; G.capB=[]; G.moveHistory=[]; G.boardHistory=[];
+  G.turn='w'; G.selected=null; G.validMoves=[];
+  G.tierHistory={}; G.collapseZones=[];
+}
+
+// ── piece state ──
+// pieceStates tracks { moves: number-of-times-this-piece-has-moved }
+// Tier unlocks every 3 moves the piece itself makes:
+//   T1: 0–2 moves  T2: 3–5 moves  T3: 6–8 moves  T4: 9+ moves
+function getPSt(r,c){ const k=`${r},${c}`; if(!G.pieceStates[k]) G.pieceStates[k]={age:0,moves:0}; return G.pieceStates[k]; }
+function getTier(moves){ return moves>=9?4:moves>=6?3:moves>=3?2:1; }
+
+// Called once per half-move only for the piece that MOVED (fr→tr)
+function incrementMoverMoves(tr,tc){
+  const k=`${tr},${tc}`;
+  if(!G.pieceStates[k]) G.pieceStates[k]={age:0,moves:0};
+  G.pieceStates[k].moves = (G.pieceStates[k].moves||0) + 1;
+  // keep age in sync as a convenience (used nowhere critical now)
+  G.pieceStates[k].age = G.pieceStates[k].moves;
+}
+
+// agePieces now only migrates keys (piece moved square); no blanket +1
+function migrateState(fr,fc,tr,tc){
+  const oldKey=`${fr},${fc}`, newKey=`${tr},${tc}`;
+  const st=G.pieceStates[oldKey]||{age:0,moves:0};
+  delete G.pieceStates[oldKey];
+  G.pieceStates[newKey]=st;
+}
+
+// ── move generation ──
+// allowTierMoves: if false (Collapse mode), tier-based extra moves are suppressed
+function rawMoves(b,r,c,ep,cas,pSt,allowTierMoves){
+  const p=b[r][c]; if(!p) return [];
+  const t=tp(p), clr=col(p), moves=[];
+  const st=pSt?.(r,c)||{age:0,moves:0};
+  const tier = (allowTierMoves===false) ? 1 : getTier(st.moves||0);
+
+  const addM=(nr,nc)=>{ if(nr<0||nr>7||nc<0||nc>7) return false; if(b[nr][nc]&&col(b[nr][nc])===clr) return false; moves.push([nr,nc]); return !b[nr][nc]; };
+  const slide=(dr,dc)=>{ let nr=r+dr,nc=c+dc; while(nr>=0&&nr<8&&nc>=0&&nc<8){ if(b[nr][nc]){if(col(b[nr][nc])!==clr)moves.push([nr,nc]);break;} moves.push([nr,nc]);nr+=dr;nc+=dc; }};
+
+  if(t==='P'){
+    const dir=clr==='w'?-1:1, start=clr==='w'?6:1;
+    if(!b[r+dir]?.[c]){ moves.push([r+dir,c]); if(r===start&&!b[r+2*dir]?.[c]) moves.push([r+2*dir,c]); }
+    for(const dc of[-1,1]){ const nc=c+dc; if(nc>=0&&nc<8){
+      if(b[r+dir]?.[nc]&&col(b[r+dir][nc])!==clr) moves.push([r+dir,nc]);
+      if(ep&&ep[0]===r+dir&&ep[1]===nc) moves.push([r+dir,nc]);
+    }}
+    if(tier>=3) for(const dc of[-1,1]){ const nc=c+dc; if(nc>=0&&nc<8&&(r+2*dir)>=0&&(r+2*dir)<8){ if(b[r+2*dir]?.[nc]&&col(b[r+2*dir][nc])!==clr) moves.push([r+2*dir,nc]); }}
+    if(tier>=4&&b[r+dir]?.[c]&&col(b[r+dir][c])!==clr) moves.push([r+dir,c]);
+  } else if(t==='N'){
+    [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+    if(tier>=2) [[2,2],[2,-2],[-2,2],[-2,-2]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+    if(tier>=3) [[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+  } else if(t==='B'){
+    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
+    if(tier>=3) [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+  } else if(t==='R'){
+    [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr,dc])=>slide(dr,dc));
+    if(tier>=3) [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+  } else if(t==='Q'){
+    [[0,1],[0,-1],[1,0],[-1,0],[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
+    if(tier>=4) [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+  } else if(t==='K'){
+    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>addM(r+dr,c+dc));
+    if(cas){
+      const row=clr==='w'?7:0;
+      const rK=clr==='w'?'wK':'bK', rQ=clr==='w'?'wQ':'bQ';
+      if(r===row&&c===4){
+        if(cas[rK]&&!b[row][5]&&!b[row][6]&&(b[row][7]==='R'||b[row][7]==='r')&&!sqAtk(b,row,4,opp(clr),pSt)&&!sqAtk(b,row,5,opp(clr),pSt)&&!sqAtk(b,row,6,opp(clr),pSt)) moves.push([row,6,'ck']);
+        if(cas[rQ]&&!b[row][3]&&!b[row][2]&&!b[row][1]&&(b[row][0]==='R'||b[row][0]==='r')&&!sqAtk(b,row,4,opp(clr),pSt)&&!sqAtk(b,row,3,opp(clr),pSt)&&!sqAtk(b,row,2,opp(clr),pSt)) moves.push([row,2,'cq']);
+      }
+    }
+  }
+  return moves;
+}
+
+function sqAtk(b,r,c,byClr,pSt,allowTier){
+  for(let ar=0;ar<8;ar++) for(let ac=0;ac<8;ac++){
+    if(b[ar][ac]&&col(b[ar][ac])===byClr){
+      if(rawMoves(b,ar,ac,null,null,pSt,allowTier).some(([mr,mc])=>mr===r&&mc===c)) return true;
+    }
+  }
+  return false;
+}
+
+function inCheckFn(b,clr,pSt,allowTier){
+  let kr=-1,kc=-1;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(b[r][c]===(clr==='w'?'K':'k')){kr=r;kc=c;}
+  if(kr<0) return false;
+  return sqAtk(b,kr,kc,opp(clr),pSt,allowTier);
+}
+
+function applyRaw(b,fr,fc,tr,tc,flag,ep){
+  const nb=b.map(row=>[...row]);
+  const p=nb[fr][fc], clr=col(p);
+  nb[tr][tc]=p; nb[fr][fc]=null;
+  if(tp(p)==='P'&&ep&&tr===ep[0]&&tc===ep[1]){ const d=clr==='w'?1:-1; nb[tr+d][tc]=null; }
+  if(flag==='ck'){ const row=clr==='w'?7:0; nb[row][5]=nb[row][7]; nb[row][7]=null; }
+  if(flag==='cq'){ const row=clr==='w'?7:0; nb[row][3]=nb[row][0]; nb[row][0]=null; }
+  return nb;
+}
+
+function legalMoves(b,r,c,ep,cas,pSt,allowTier){
+  const p=b[r][c]; if(!p) return [];
+  const clr=col(p);
+  return rawMoves(b,r,c,ep,cas,pSt,allowTier).filter(([nr,nc,f])=>!inCheckFn(applyRaw(b,r,c,nr,nc,f,ep),clr,pSt,allowTier));
+}
+
+// ── APPLY MOVE (real game) ──
+// allowTierMoves: true for Evolved, false for Collapse
+function _allowTier(){ return G.gameType==='evolved'; }
+
+function applyMove(fr,fc,tr,tc,promo){
+  const p=G.board[fr][fc], clr=col(p), t=tp(p);
+  const captured=G.board[tr][tc];
+  let wasEP=false, chainCaps=[];
+
+  // save history
+  G.boardHistory.push({
+    board:G.board.map(r=>[...r]),
+    pieceStates:JSON.parse(JSON.stringify(G.pieceStates)),
+    enPassant:G.enPassant, castling:{...G.castling},
+    turn:G.turn, turnNum:G.turnNum,
+    capW:[...G.capW], capB:[...G.capB],
+    lastMove:G.lastMove?{...G.lastMove}:null,
+    collapseZones:G.collapseZones.map(z=>({...z})),
+  });
+
+  const capTier = _allowTier() ? getTier(getPSt(fr,fc).moves||0) : 1;
+
+  // Move piece on board, migrate state, then increment move count
+  G.board[tr][tc]=p; G.board[fr][fc]=null;
+  migrateState(fr,fc,tr,tc);
+  incrementMoverMoves(tr,tc);
+
+  // en passant capture
+  if(t==='P'&&G.enPassant&&tr===G.enPassant[0]&&tc===G.enPassant[1]){
+    const d=clr==='w'?1:-1;
+    const ep2=G.board[tr+d][tc];
+    G.board[tr+d][tc]=null; delete G.pieceStates[`${tr+d},${tc}`];
+    (clr==='w'?G.capW:G.capB).push(ep2); wasEP=true;
+  }
+
+  if(captured){
+    (clr==='w'?G.capW:G.capB).push(captured);
+    if(capTier>=4) chainCaps=triggerChain(tr,tc,clr);
+  }
+
+  // castling rook — also migrate rook state
+  if(t==='K'){
+    if(tc===fc+2){
+      migrateState(tr,7,tr,5);
+      G.board[tr][5]=G.board[tr][7]; G.board[tr][7]=null;
+    }
+    if(tc===fc-2){
+      migrateState(tr,0,tr,3);
+      G.board[tr][3]=G.board[tr][0]; G.board[tr][0]=null;
+    }
+    if(clr==='w'){G.castling.wK=false;G.castling.wQ=false;}
+    else{G.castling.bK=false;G.castling.bQ=false;}
+  }
+  if(t==='R'){
+    if(fr===7&&fc===7)G.castling.wK=false; if(fr===7&&fc===0)G.castling.wQ=false;
+    if(fr===0&&fc===7)G.castling.bK=false; if(fr===0&&fc===0)G.castling.bQ=false;
+  }
+
+  G.enPassant = (t==='P'&&Math.abs(tr-fr)===2) ? [(fr+tr)/2,tc] : null;
+
+  // promotion
+  if(t==='P'&&(tr===0||tr===7)){
+    const pm=promo||'Q';
+    G.board[tr][tc]=clr==='w'?pm:pm.toLowerCase();
+  }
+
+  // collapse: remove piece if on collapsed tile
+  const czDead = G.collapseZones.find(z=>z.r===tr&&z.c===tc&&z.state==='collapsed');
+  if(czDead){ (clr==='w'?G.capW:G.capB).push(G.board[tr][tc]); G.board[tr][tc]=null; delete G.pieceStates[`${tr},${tc}`]; }
+
+  G.lastMove={fr,fc,tr,tc};
+  G.turnNum++; G.turn=opp(clr);
+
+  // collapse advance
+  if(G.gameType==='collapse') advanceCollapseZones();
+
+  checkTierUps();
+  G.inCheck=inCheckFn(G.board,G.turn,_pSt,_allowTier());
+
+  // log
+  const cs='abcdefgh';
+  const mv=`${cs[fc]}${8-fr}→${cs[tc]}${8-tr}`;
+  const capStr=(captured||wasEP)?'✗':'';
+  const cStr=chainCaps.length?` ⚡×${chainCaps.length}`:'';
+  logMove(mv+capStr+cStr, captured?'capture':chainCaps.length?'chain':'');
+  if(G.inCheck) logMove('CHECK!','check');
+
+  return {captured,chainCaps};
+}
+
+function _pSt(r,c){ const k=`${r},${c}`; return G.pieceStates[k]||{age:0,moves:0}; }
+
+function triggerChain(r,c,atkClr){
+  const chains=[];
+  const adj=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+  for(const [dr,dc] of adj){
+    const nr=r+dr,nc=c+dc;
+    if(nr<0||nr>7||nc<0||nc>7) continue;
+    if(G.board[nr][nc]&&col(G.board[nr][nc])===opp(atkClr)){
+      const tgt=G.board[nr][nc];
+      const tier=getTier(_pSt(nr,nc).moves||0);
+      if(Math.random()<0.22+tier*0.1){
+        (atkClr==='w'?G.capW:G.capB).push(tgt);
+        G.board[nr][nc]=null; delete G.pieceStates[`${nr},${nc}`];
+        chains.push([nr,nc]);
+      }
+    }
+  }
+  return chains;
+}
+
+// ── TIER UPS ──
+function checkTierUps(){
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(!G.board[r][c]) continue;
+    const st=G.pieceStates[`${r},${c}`]||{age:0,moves:0};
+    const tier=getTier(st.moves||0);
+    const k=`${r},${c}`;
+    const prev=G.tierHistory[k]||1;
+    if(tier>prev){ G.tierHistory[k]=tier; logMove(`${GLYPHS[G.board[r][c]]} TIER ${tier}!`,'tier-up'); showTierUp(r,c,tier); }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  COLLAPSE ZONE SYSTEM
+//  Tuned for 50-move games:
+//  First collapse wave: turn 10
+//  Wave every 8 turns initially, tightening to 5 minimum
+//  Count grows slowly: 1 → 2 → 3 … max 5 tiles per wave
+// ═══════════════════════════════════════════════
+function initCollapseZones(){
+  G.collapseZones=[];
+  G.collapseInterval=8;      // turns between waves
+  G.nextCollapseAt=10;       // first wave at turn 10
+  G.collapseCount=1;         // tiles spawned per wave (grows each wave)
+}
+
+function advanceCollapseZones(){
+  // advance existing zone timers
+  const dead=[];
+  for(const z of G.collapseZones){
+    if(z.state==='warn'){ z.turnsLeft--; if(z.turnsLeft<=0) z.state='imminent'; }
+    else if(z.state==='imminent'){ z.state='collapsed'; killOnCollapse(z.r,z.c); dead.push(z); }
+  }
+  dead.forEach(z=>{ logMove(`TILE ${('abcdefgh')[z.c]}${8-z.r} COLLAPSED!`,'collapse'); spawnCollapseFX(z.r,z.c); });
+
+  // spawn new wave?
+  if(G.turnNum>=G.nextCollapseAt){
+    const count=G.collapseCount;
+    for(let i=0;i<count;i++) spawnCollapseZone();
+    G.nextCollapseAt += G.collapseInterval;
+    // slowly escalate: more tiles per wave, shorter interval, both capped
+    G.collapseCount = Math.min(5, G.collapseCount + 1);
+    G.collapseInterval = Math.max(5, G.collapseInterval - 1);
+  }
+}
+
+function spawnCollapseZone(){
+  // find a non-collapsed, non-warned tile preferring center/mid-board
+  const candidates=[];
+  for(let r=1;r<7;r++) for(let c=0;c<8;c++){
+    if(!G.collapseZones.some(z=>z.r===r&&z.c===c&&z.state!=='collapsed'))
+      candidates.push([r,c]);
+  }
+  if(!candidates.length) return;
+  const [r,c]=candidates[Math.floor(Math.random()*candidates.length)];
+  G.collapseZones.push({r,c,state:'warn',turnsLeft:3}); // 3-turn warning for long games
+  logMove(`⚠ TILE ${('abcdefgh')[c]}${8-r} UNSTABLE`,'collapse');
+}
+
+function killOnCollapse(r,c){
+  if(G.board[r][c]){
+    const p=G.board[r][c];
+    (col(p)==='w'?G.capW:G.capB).push(p);
+    G.board[r][c]=null; delete G.pieceStates[`${r},${c}`];
+    logMove(`💀 ${GLYPHS[p]} CONSUMED BY VOID`,'collapse');
+  }
+}
+
+function isCollapsed(r,c){ return G.collapseZones.some(z=>z.r===r&&z.c===c&&z.state==='collapsed'); }
+function getCollapseState(r,c){ const z=G.collapseZones.find(z=>z.r===r&&z.c===c); return z?z.state:null; }
+
+// ═══════════════════════════════════════════════
+//  FOG OF WAR
+//  Tuned for 50-move games:
+//  Turns  0–15: full visibility (anchor the player)
+//  Turns 16–30: partial fog, radius=2 around each piece
+//  Turns 31–40: radius=1 (tight fog, mid-paranoia)
+//  Turns  41+ : radius=1, no partial bleed (heavy paranoia)
+// ═══════════════════════════════════════════════
+function computeFog(){
+  const visible=new Set();
+  const partial=new Set();
+  const turn=G.turn;
+
+  // Full visibility early
+  if(G.turnNum<=15){
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) visible.add(`${r},${c}`);
+    return {visible,partial};
+  }
+
+  const radius  = G.turnNum<=30 ? 2 : 1;
+  const showPartial = G.turnNum<=40;
+
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(G.board[r][c]&&col(G.board[r][c])===turn){
+      visible.add(`${r},${c}`);
+      for(let dr=-radius;dr<=radius;dr++) for(let dc=-radius;dc<=radius;dc++){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<8&&nc>=0&&nc<8){
+          if(Math.abs(dr)<=1&&Math.abs(dc)<=1) visible.add(`${nr},${nc}`);
+          else if(showPartial) partial.add(`${nr},${nc}`);
+        }
+      }
+    }
+  }
+  for(const k of visible) partial.delete(k);
+  return {visible,partial};
+}
+
+// ═══════════════════════════════════════════════
+//  INFLUENCE ZONES (Evolved only)
+// ═══════════════════════════════════════════════
+function computeInfluence(){
+  const zones={};
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(!G.board[r][c]) continue;
+    const st=G.pieceStates[`${r},${c}`]||{age:0};
+    const tier=getTier(st.age);
+    const clr=col(G.board[r][c]);
+    const zType=tier>=4?'purple':(clr==='w'?'green':'red');
+    if(tier>=2){
+      const range=tier>=3?2:1;
+      const adj=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+      for(const [dr,dc] of adj) for(let i=1;i<=range;i++){
+        const nr=r+dr*i,nc=c+dc*i;
+        if(nr<0||nr>7||nc<0||nc>7) break;
+        const k=`${nr},${nc}`;
+        if(!zones[k]||zType==='purple') zones[k]=zType;
+      }
+    }
+  }
+  return zones;
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+function render(){
+  const bEl=document.getElementById('board'); bEl.innerHTML='';
+  const zones = (G.gameType==='evolved'&&G.showZones) ? computeInfluence() : {};
+  const {visible,partial} = G.gameType==='collapse'&&!G.fogDebug ? computeFog() : {visible:new Set(Array.from({length:64},(_,i)=>`${Math.floor(i/8)},${i%8}`)),partial:new Set()};
+
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const tile=document.createElement('div');
+    tile.className='tile '+((r+c)%2===0?'light':'dark');
+    tile.dataset.r=r; tile.dataset.c=c;
+
+    const vis=visible.has(`${r},${c}`);
+    const part=partial.has(`${r},${c}`);
+    const czState=getCollapseState(r,c);
+
+    // Collapse zone
+    if(czState==='warn') tile.classList.add('collapse-warn');
+    else if(czState==='imminent') tile.classList.add('collapse-imminent');
+    else if(czState==='collapsed') tile.classList.add('collapsed');
+
+    // Influence zones (evolved)
+    if(zones[`${r},${c}`]) tile.classList.add('iz-'+zones[`${r},${c}`]);
+
+    // Last move
+    if(G.lastMove&&((r===G.lastMove.fr&&c===G.lastMove.fc)||(r===G.lastMove.tr&&c===G.lastMove.tc))) tile.classList.add('last-move');
+
+    // Check
+    if(G.inCheck){ const kp=G.turn==='w'?'K':'k'; if(G.board[r][c]===kp) tile.classList.add('in-check'); }
+
+    // Selected / valid
+    if(G.selected&&G.selected[0]===r&&G.selected[1]===c) tile.classList.add('selected');
+    if(G.validMoves.some(([mr,mc])=>mr===r&&mc===c)){
+      if(G.board[r][c]&&col(G.board[r][c])!==G.turn) tile.classList.add('valid-capture');
+      else tile.classList.add('valid-move');
+    }
+
+    // Fog
+    if(G.gameType==='collapse'&&!G.fogDebug){
+      if(!vis&&!part) tile.classList.add('fog-hidden');
+      else if(part&&!vis) tile.classList.add('fog-partial');
+    }
+
+    tile.addEventListener('click',()=>onTile(r,c));
+
+    // Piece
+    if(G.board[r][c]&&czState!=='collapsed'){
+      const p=G.board[r][c];
+      const st=G.pieceStates[`${r},${c}`]||{age:0,moves:0};
+      const tier=getTier(st.moves||0);
+      const piece=document.createElement('div');
+      piece.className='piece '+(isW(p)?'wp':'bp');
+      piece.dataset.tier = G.gameType==='collapse' ? 1 : tier;
+      piece.textContent=GLYPHS[p];
+      piece.addEventListener('click',e=>{e.stopPropagation();onTile(r,c);});
+      tile.appendChild(piece);
+
+      if(G.gameType==='evolved'){
+        const badge=document.createElement('div');
+        badge.className=`tier-badge t${tier}`;
+        badge.textContent=`T${tier}`;
+        tile.appendChild(badge);
+        const age=document.createElement('div');
+        age.className='age-c'; age.textContent=(st.moves||0)+'m';
+        tile.appendChild(age);
+      } else {
+        // Collapse: show move count only (no tier power bonus)
+        const age=document.createElement('div');
+        age.className='age-c'; age.textContent=(st.moves||0)+'m';
+        tile.appendChild(age);
+      }
+    }
+
+    bEl.appendChild(tile);
+  }
+  updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('h-turn').textContent=G.turnNum+1;
+  document.getElementById('h-wcap').textContent=G.capW.length;
+  document.getElementById('h-bcap').textContent=G.capB.length;
+  document.getElementById('turn-dot').className='turn-dot '+(G.turn==='w'?'td-w':'td-b');
+  document.getElementById('turn-txt').textContent=(G.turn==='w'?'WHITE':'BLACK')+' TO MOVE';
+  document.getElementById('b-cap-list').innerHTML=G.capB.map(p=>`<span class="cap-p">${GLYPHS[p.toUpperCase()]}</span>`).join('');
+  document.getElementById('w-cap-list').innerHTML=G.capW.map(p=>`<span class="cap-p">${GLYPHS[p.toLowerCase()]}</span>`).join('');
+
+  // Tension — scaled to 50-move games
+  const mx=50;
+  const pct=Math.min(100,(G.turnNum/mx)*100);
+  document.getElementById('tens-fill').style.width=pct+'%';
+  // Phase breakpoints tuned for 50-move games
+  const phase = G.turnNum<16 ? 'early' : G.turnNum<35 ? 'mid' : 'late';
+  const phEl=document.getElementById('phase-lbl');
+  phEl.className='phase-badge ph-'+phase;
+  phEl.textContent=phase==='early'?'EARLY GAME':phase==='mid'?'MID — SYSTEMS ACTIVE':'LATE — OVERLOAD';
+
+  // Effects
+  const eff=document.getElementById('effects-list');
+  const fx=[];
+  if(G.gameType==='evolved'){
+    if(G.turnNum>=3)  fx.push('<span style="color:var(--accent)">■ PIECES EVOLVING (EVERY 3 MOVES)</span>');
+    if(G.turnNum>=10) fx.push('<span style="color:var(--accent4)">■ INFLUENCE ZONES ACTIVE</span>');
+    if(G.turnNum>=20) fx.push('<span style="color:var(--accent2)">■ CHAIN REACTIONS ENABLED</span>');
+  }
+  if(G.gameType==='collapse'){
+    if(G.turnNum>=10) fx.push('<span style="color:var(--orange)">■ COLLAPSE WAVES ACTIVE</span>');
+    if(G.turnNum>=16) fx.push('<span style="color:var(--accent4)">■ PARTIAL FOG ACTIVE</span>');
+    if(G.turnNum>=31) fx.push('<span style="color:var(--accent2)">■ HEAVY FOG — PARANOIA</span>');
+    const cz=G.collapseZones.filter(z=>z.state!=='collapsed').length;
+    if(cz>0) fx.push(`<span style="color:var(--orange)">⚠ ${cz} UNSTABLE TILES</span>`);
+  }
+  if(G.inCheck) fx.push('<span style="color:var(--accent2)">⚠ CHECK!</span>');
+  eff.innerHTML=fx.join('<br>')||'<span>INITIALIZING...</span>';
+
+  // Right panel extra
+  updateRPExtra();
+}
+
+function updateRPExtra(){
+  const el=document.getElementById('rp-extra');
+  if(G.gameType==='evolved'){
+    const powers=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      if(!G.board[r][c]) continue;
+      const st=G.pieceStates[`${r},${c}`]||{age:0,moves:0};
+      const tier=getTier(st.moves||0);
+      if(tier>=2) powers.push({p:G.board[r][c],tier,mv:st.moves||0});
+    }
+    powers.sort((a,b)=>b.tier-a.tier||b.mv-a.mv);
+    el.innerHTML=`<div class="panel-title">PIECE POWER</div><div class="power-list">${powers.slice(0,7).map(pw=>`<div class="pi"><div class="pi-icon">${GLYPHS[pw.p]}</div><div class="pi-info"><div class="pi-name">T${pw.tier} · ${pw.mv} MOVES</div><div class="pi-bar"><div class="pi-fill pf${pw.tier}"></div></div></div></div>`).join('')}</div>`;
+  } else {
+    const warn=G.collapseZones.filter(z=>z.state==='warn').length;
+    const imm=G.collapseZones.filter(z=>z.state==='imminent').length;
+    const col_=G.collapseZones.filter(z=>z.state==='collapsed').length;
+    const fogLabel = G.turnNum<=15?'CLEAR (TURNS 0–15)':G.turnNum<=30?'PARTIAL (TURNS 16–30)':G.turnNum<=40?'HEAVY (TURNS 31–40)':'MAX PARANOIA (41+)';
+    const fogColor = G.turnNum<=15?'var(--green)':G.turnNum<=30?'var(--accent4)':'var(--accent2)';
+    el.innerHTML=`<div class="panel-title">COLLAPSE STATUS</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.58rem;line-height:2.2;">
+      <div style="color:var(--orange)">⚠ UNSTABLE: ${warn}</div>
+      <div style="color:var(--accent2)">💥 IMMINENT: ${imm}</div>
+      <div style="color:#2a2a2a">✕ COLLAPSED: ${col_}</div>
+      <div style="color:#444;margin-top:4px;font-size:0.5rem;">NEXT WAVE: TURN ${G.nextCollapseAt+1}</div>
+    </div>
+    <div class="panel-title" style="margin-top:10px;">FOG LEVEL</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:${fogColor};line-height:1.8;">${fogLabel}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INTERACTION
+// ═══════════════════════════════════════════════
+function onTile(r,c){
+  if(!G.gameActive||G.aiWorking) return;
+  if(G.mode==='pvai'&&G.turn==='b') return;
+
+  // Can't move to collapsed tile
+  if(isCollapsed(r,c)) return;
+
+  if(G.selected){
+    const mv=G.validMoves.find(([mr,mc])=>mr===r&&mc===c);
+    if(mv){
+      const p=G.board[G.selected[0]][G.selected[1]];
+      if(tp(p)==='P'&&(r===0||r===7)){ showPromo(G.selected[0],G.selected[1],r,c,G.turn); return; }
+      doMove(G.selected[0],G.selected[1],r,c,null);
+      return;
+    }
+    G.selected=null; G.validMoves=[];
+  }
+  if(G.board[r][c]&&col(G.board[r][c])===G.turn){
+    G.selected=[r,c];
+    G.validMoves=legalMoves(G.board,r,c,G.enPassant,G.castling,_pSt,_allowTier()).filter(([mr,mc])=>!isCollapsed(mr,mc));
+  }
+  render();
+}
+
+function doMove(fr,fc,tr,tc,promo){
+  const {captured,chainCaps}=applyMove(fr,fc,tr,tc,promo);
+  G.selected=null; G.validMoves=[];
+  if(captured) spawnCaptureFX(tr,tc);
+  if(chainCaps.length){ chainCaps.forEach(([cr,cc])=>spawnCaptureFX(cr,cc)); showPopup('chain'); }
+  render(); checkGameOver();
+  if(G.gameActive&&G.mode==='pvai'&&G.turn==='b') setTimeout(doAI,280);
+}
+
+// ═══════════════════════════════════════════════
+//  GAME OVER
+// ═══════════════════════════════════════════════
+function checkGameOver(){
+  // check if king exists
+  const wKing=G.board.flat().includes('K');
+  const bKing=G.board.flat().includes('k');
+  if(!wKing){endGame('BLACK WINS','WHITE KING CONSUMED BY VOID');return;}
+  if(!bKing){endGame('WHITE WINS','BLACK KING CONSUMED BY VOID');return;}
+
+  let hasMove=false;
+  outer: for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(G.board[r][c]&&col(G.board[r][c])===G.turn){
+      const ms=legalMoves(G.board,r,c,G.enPassant,G.castling,_pSt,_allowTier()).filter(([mr,mc])=>!isCollapsed(mr,mc));
+      if(ms.length){hasMove=true;break outer;}
+    }
+  }
+  if(!hasMove){
+    if(G.inCheck) endGame('CHECKMATE',(opp(G.turn)==='w'?'WHITE':'BLACK')+' WINS — SYSTEM COLLAPSE');
+    else endGame('STALEMATE','EQUILIBRIUM — DRAW');
+  }
+}
+
+function endGame(title,sub){
+  G.gameActive=false;
+  document.getElementById('go-title').textContent=title;
+  document.getElementById('go-sub').textContent=sub;
+  document.getElementById('go-title').className='ov-title'+(G.gameType==='collapse'?' orange':'');
+  document.getElementById('ov-gameover').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════
+//  AI — MINIMAX + ALPHA-BETA
+// ═══════════════════════════════════════════════
+function doAI(){
+  if(!G.gameActive) return;
+  G.aiWorking=true; document.getElementById('ai-ind').classList.add('active');
+  setTimeout(()=>{
+    const res=minimax(G.board,G.aiDepth,-Infinity,Infinity,true,G.enPassant,G.castling);
+    document.getElementById('ai-ind').classList.remove('active'); G.aiWorking=false;
+    if(res.move){
+      const [fr,fc,tr,tc]=res.move;
+      const p=G.board[fr][fc];
+      let promo=null;
+      if(tp(p)==='P'&&(tr===0||tr===7)) promo='Q';
+      doMove(fr,fc,tr,tc,promo);
+    }
+  },50);
+}
+
+const POS={
+  P:[[0,0,0,0,0,0,0,0],[5,10,10,-20,-20,10,10,5],[5,-5,-10,0,0,-10,-5,5],[0,0,0,20,20,0,0,0],[5,5,10,25,25,10,5,5],[10,10,20,30,30,20,10,10],[50,50,50,50,50,50,50,50],[0,0,0,0,0,0,0,0]],
+  N:[[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,5,5,0,-20,-40],[-30,5,10,15,15,10,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,10,15,15,10,0,-30],[-40,-20,0,0,0,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
+  B:[[-20,-10,-10,-10,-10,-10,-10,-20],[-10,5,0,0,0,0,5,-10],[-10,10,10,10,10,10,10,-10],[-10,0,10,10,10,10,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,5,10,10,5,0,-10],[-10,0,0,0,0,0,0,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
+};
+
+function evaluate(b){
+  let score=0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p=b[r][c]; if(!p) continue;
+    const t=tp(p), clr=col(p), val=VALS[t]||0;
+    const st=G.pieceStates[`${r},${c}`]||{age:0,moves:0};
+    const tier=_allowTier()?getTier(st.moves||0):1;
+    const tierB=(tier-1)*val*0.12;
+    const tbl=POS[t]; const tr_=clr==='w'?r:7-r;
+    const posB=tbl?(tbl[tr_][c]*0.4):0;
+    // Collapse penalty: penalize AI for being near collapse zones
+    const czpen=G.collapseZones.filter(z=>z.r===r&&z.c===c&&z.state!=='collapsed').length*30;
+    const total=val+tierB+posB-czpen;
+    score+=clr==='b'?total:-total;
+  }
+  return score;
+}
+
+function getAllMoves(b,clr,ep,cas){
+  const moves=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(b[r][c]&&col(b[r][c])===clr){
+      legalMoves(b,r,c,ep,cas,_pSt,_allowTier()).filter(([mr,mc])=>!isCollapsed(mr,mc)).forEach(([tr,tc,f])=>moves.push([r,c,tr,tc,f]));
+    }
+  }
+  return moves;
+}
+
+function minimax(b,depth,alpha,beta,maximizing,ep,cas){
+  if(depth===0) return {score:evaluate(b)};
+  const clr=maximizing?'b':'w';
+  const moves=getAllMoves(b,clr,ep,cas);
+  if(!moves.length){ return {score:inCheckFn(b,clr,_pSt,_allowTier())?(maximizing?-99999:99999):0}; }
+  // move ordering: captures first
+  moves.sort((a,bm)=>{
+    const ca=b[a[2]][a[3]]?(VALS[tp(b[a[2]][a[3]])]||0):0;
+    const cb=b[bm[2]][bm[3]]?(VALS[tp(b[bm[2]][bm[3]])]||0):0;
+    return cb-ca;
+  });
+  let best=maximizing?-Infinity:Infinity, bestMove=null;
+  for(const mv of moves){
+    const [fr,fc,tr,tc,f]=mv;
+    const nb=applyRaw(b,fr,fc,tr,tc,f,ep);
+    if(tp(b[fr][fc])==='P'&&(tr===0||tr===7)) nb[tr][tc]=clr==='b'?'q':'Q';
+    const newEP=(tp(b[fr][fc])==='P'&&Math.abs(tr-fr)===2)?[(fr+tr)/2,tc]:null;
+    const res=minimax(nb,depth-1,alpha,beta,!maximizing,newEP,cas);
+    if(maximizing){ if(res.score>best){best=res.score;bestMove=mv;} alpha=Math.max(alpha,best); }
+    else          { if(res.score<best){best=res.score;bestMove=mv;} beta=Math.min(beta,best); }
+    if(beta<=alpha) break;
+  }
+  return {score:best,move:bestMove};
+}
+
+// ═══════════════════════════════════════════════
+//  VISUAL FX
+// ═══════════════════════════════════════════════
+function tilePos(r,c){
+  const bEl=document.getElementById('board');
+  const ts=bEl.clientWidth/8, rect=bEl.getBoundingClientRect();
+  return {x:rect.left+c*ts+ts/2, y:rect.top+r*ts+ts/2};
+}
+
+function spawnCaptureFX(r,c){
+  const {x,y}=tilePos(r,c); const fx=document.getElementById('fx-layer');
+  const fl=document.createElement('div'); fl.className='fx-flash';
+  fl.style.setProperty('--cx',x+'px'); fl.style.setProperty('--cy',y+'px');
+  fx.appendChild(fl); setTimeout(()=>fl.remove(),350);
+  const cols=['#ff2060','#a020f0','#00f0ff','#ffcc00'];
+  for(let i=0;i<12;i++){
+    const p=document.createElement('div'); p.className='fx-p';
+    const ang=(Math.PI*2/12)*i, d=40+Math.random()*40;
+    p.style.cssText=`left:${x}px;top:${y}px;width:${4+Math.random()*6}px;height:${4+Math.random()*6}px;background:${cols[Math.floor(Math.random()*cols.length)]};--dx:${Math.cos(ang)*d}px;--dy:${Math.sin(ang)*d}px;animation-duration:${0.5+Math.random()*0.4}s;`;
+    fx.appendChild(p); setTimeout(()=>p.remove(),900);
+  }
+}
+
+function spawnCollapseFX(r,c){
+  const {x,y}=tilePos(r,c); const fx=document.getElementById('fx-layer');
+  const el=document.createElement('div'); el.className='fx-collapse';
+  el.style.cssText=`left:${x-30}px;top:${y-30}px;width:60px;height:60px;`;
+  fx.appendChild(el); setTimeout(()=>el.remove(),700);
+}
+
+function showPopup(type){
+  const el=document.createElement('div');
+  el.className=type==='chain'?'chain-popup':'collapse-popup';
+  el.textContent=type==='chain'?'⚡ CHAIN REACTION':'💥 TILE COLLAPSE';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),1200);
+}
+
+function showTierUp(r,c,tier){
+  const {x,y}=tilePos(r,c);
+  const el=document.createElement('div'); el.className='tier-popup';
+  el.textContent=`TIER ${tier} UNLOCKED`;
+  el.style.cssText=`left:${x}px;top:${y}px;transform:translateX(-50%);`;
+  document.body.appendChild(el); setTimeout(()=>el.remove(),1500);
+}
+
+// ═══════════════════════════════════════════════
+//  PROMOTION
+// ═══════════════════════════════════════════════
+function showPromo(fr,fc,tr,tc,clr){
+  const choices=clr==='w'?['Q','R','B','N']:['q','r','b','n'];
+  const ov=document.createElement('div'); ov.className='promo-ov';
+  ov.innerHTML=`<div class="promo-box"><div class="promo-title">PROMOTE PAWN</div><div class="promo-choices">${choices.map(p=>`<button class="promo-btn" onclick="execPromo(${fr},${fc},${tr},${tc},'${tp(p)}')">${GLYPHS[p]}</button>`).join('')}</div></div>`;
+  document.body.appendChild(ov);
+}
+window.execPromo=function(fr,fc,tr,tc,pt){ document.querySelector('.promo-ov')?.remove(); doMove(fr,fc,tr,tc,pt); };
+
+// ═══════════════════════════════════════════════
+//  MOVE LOG
+// ═══════════════════════════════════════════════
+function logMove(txt,cls=''){
+  const log=document.getElementById('move-log');
+  const e=document.createElement('div');
+  e.className='log-entry latest '+cls;
+  e.textContent=`[${G.turnNum}] ${txt}`;
+  log.querySelectorAll('.latest').forEach(x=>x.classList.remove('latest'));
+  log.prepend(e);
+}
+
+// ═══════════════════════════════════════════════
+//  COORDS
+// ═══════════════════════════════════════════════
+function buildCoords(){
+  const cols='abcdefgh';
+  const top=document.getElementById('cr-top'), bot=document.getElementById('cr-bot'), left=document.getElementById('cr-left');
+  top.innerHTML=bot.innerHTML=left.innerHTML='';
+  for(let i=0;i<8;i++){
+    const s1=document.createElement('span');s1.textContent=cols[i];top.appendChild(s1);
+    const s2=document.createElement('span');s2.textContent=cols[i];bot.appendChild(s2);
+    const s3=document.createElement('span');s3.textContent=8-i;left.appendChild(s3);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════
+function toggleZones(){ G.showZones=!G.showZones; document.getElementById('btn-zones').classList.toggle('active',G.showZones); render(); }
+function toggleFogDebug(){ G.fogDebug=!G.fogDebug; render(); }
+
+function undoMove(){
+  if(!G.boardHistory.length) return;
+  const steps=G.mode==='pvai'?Math.min(2,G.boardHistory.length):1;
+  for(let i=0;i<steps;i++){
+    if(!G.boardHistory.length) break;
+    const h=G.boardHistory.pop();
+    G.board=h.board; G.pieceStates=h.pieceStates;
+    G.enPassant=h.enPassant; G.castling=h.castling;
+    G.turn=h.turn; G.turnNum=h.turnNum;
+    G.capW=h.capW; G.capB=h.capB;
+    G.lastMove=h.lastMove; G.collapseZones=h.collapseZones;
+  }
+  G.inCheck=inCheckFn(G.board,G.turn,_pSt,_allowTier());
+  G.selected=null; G.validMoves=[];
+  G.tierHistory={};
+  render();
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+let currentGame=''; // 'evolved' | 'collapse'
+
+function showShell(show){
+  document.getElementById('game-header').classList.toggle('hidden',!show);
+  document.getElementById('game-shell').classList.toggle('hidden',!show);
+  document.getElementById('game-bottom').classList.toggle('hidden',!show);
+  document.getElementById('hub').classList.toggle('hidden',show);
+}
+
+function launchEvolved(){
+  showShell(true);
+  document.getElementById('btn-zones').style.display='';
+  document.getElementById('btn-fog').style.display='none';
+  document.getElementById('hdr-logo').innerHTML='EVOLVED CHESS <span>SYSTEM OVERLOAD</span>';
+  document.getElementById('hdr-logo').style.background='linear-gradient(90deg,var(--accent),var(--accent3),var(--accent2))';
+  document.getElementById('hdr-logo').style.webkitBackgroundClip='text';
+  document.getElementById('hdr-logo').style.webkitTextFillColor='transparent';
+  document.getElementById('lp-section-title').textContent='TIER LEGEND';
+  document.getElementById('lp-section-body').innerHTML='<div style="color:#2a2a3a">T1 · NORMAL</div><div style="color:var(--accent)">T2 · ENHANCED</div><div style="color:var(--accent4)">T3 · POWERFUL</div><div style="color:var(--accent2)">T4 · UNSTABLE</div>';
+  document.getElementById('ov-evolved').classList.remove('hidden');
+}
+
+function launchCollapse(){
+  showShell(true);
+  document.getElementById('btn-zones').style.display='none';
+  document.getElementById('btn-fog').style.display='';
+  document.getElementById('hdr-logo').innerHTML='COLLAPSE CHESS <span>VOID PROTOCOL</span>';
+  document.getElementById('hdr-logo').style.background='linear-gradient(90deg,var(--orange),var(--accent4),var(--accent2))';
+  document.getElementById('hdr-logo').style.webkitBackgroundClip='text';
+  document.getElementById('hdr-logo').style.webkitTextFillColor='transparent';
+  document.getElementById('lp-section-title').textContent='ZONE LEGEND';
+  document.getElementById('lp-section-body').innerHTML='<div style="color:var(--orange)">⚠ UNSTABLE</div><div style="color:var(--accent2)">💥 IMMINENT</div><div style="color:#2a2a2a">✕ COLLAPSED</div><br><div style="color:var(--green)">░ FOG: CLEAR</div><div style="color:var(--accent4)">▒ FOG: PARTIAL</div><div style="color:var(--accent2)">█ FOG: HEAVY</div>';
+  document.getElementById('ov-collapse').classList.remove('hidden');
+}
+
+function backToHub(){
+  document.getElementById('ov-evolved').classList.add('hidden');
+  document.getElementById('ov-collapse').classList.add('hidden');
+  document.getElementById('ov-gameover').classList.add('hidden');
+  showShell(false); G.gameActive=false;
+}
+
+function resetCurrentGame(){ G.gameType==='evolved'?startEvolved():startCollapse(); }
+
+// ── EVOLVED CONFIG ──
+let evMode='pvai', evDepth=2;
+window.evSelectMode=function(m){ evMode=m; document.getElementById('ev-pvai').className='mode-btn'+(m==='pvai'?' sel':''); document.getElementById('ev-pvp').className='mode-btn'+(m==='pvp'?' sel':''); document.getElementById('ev-depth-row').style.opacity=m==='pvp'?'0.3':'1'; };
+window.evSelDepth=function(d){ evDepth=d; document.querySelectorAll('#ev-depth-row .db').forEach((b,i)=>b.className='db'+(i===d-1?' sel':'')); };
+window.startEvolved=function(){
+  document.getElementById('ov-evolved').classList.add('hidden');
+  document.getElementById('ov-gameover').classList.add('hidden');
+  G=newG(); G.gameType='evolved'; G.mode=evMode; G.aiDepth=evDepth; G.showZones=true;
+  initBoard(); G.gameActive=true;
+  buildCoords(); render();
+};
+
+// ── COLLAPSE CONFIG ──
+let clMode='pvai', clDepth=2;
+window.clSelectMode=function(m){ clMode=m; document.getElementById('cl-pvai').className='mode-btn'+(m==='pvai'?' sel-o':''); document.getElementById('cl-pvp').className='mode-btn'+(m==='pvp'?' sel-o':''); document.getElementById('cl-depth-row').style.opacity=m==='pvp'?'0.3':'1'; };
+window.clSelDepth=function(d){ clDepth=d; document.querySelectorAll('#cl-depth-row .db').forEach((b,i)=>b.className='db'+(i===d-1?' sel-o':'')); };
+window.startCollapse=function(){
+  document.getElementById('ov-collapse').classList.add('hidden');
+  document.getElementById('ov-gameover').classList.add('hidden');
+  G=newG(); G.gameType='collapse'; G.mode=clMode; G.aiDepth=clDepth;
+  G.fogEnabled=true; G.fogDebug=false;
+  initBoard(); initCollapseZones(); G.gameActive=true;
+  buildCoords(); render();
+};
+
+// expose
+window.toggleZones=toggleZones;
+window.toggleFogDebug=toggleFogDebug;
+window.undoMove=undoMove;
+window.backToHub=backToHub;
+window.resetCurrentGame=resetCurrentGame;
+window.launchEvolved=launchEvolved;
+window.launchCollapse=launchCollapse;
+
+// default depth btn selected on page load
+document.querySelectorAll('#ev-depth-row .db')[1].classList.add('sel');
+document.querySelectorAll('#cl-depth-row .db')[1].classList.add('sel-o');
+</script>
+</body>
+</html>

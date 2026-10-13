@@ -657,7 +657,7 @@
             }
         });
 
-        const emojiIcons = ['�', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😍', '😘', '😎', '🥰', '😗', '😙', '😚'];
+        const emojiIcons = ['🚀', '👾', '👑', '⚡', '🔥', '🎲', '🍕', '💎'];
         let memoryCards = [];
         let flippedCards = [];
         let matchedPairs = 0;
@@ -684,6 +684,7 @@
                 const card = document.createElement('div');
                 card.className = 'aspect-square bg-slate-800 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-center text-3xl transition-all duration-300 transform hover:scale-105 active:scale-95 perspective-1000';
                 card.dataset.emoji = emoji;
+
                 card.dataset.index = index;
 
                 card.innerHTML = `
