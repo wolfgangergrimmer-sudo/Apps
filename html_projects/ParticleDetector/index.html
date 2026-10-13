@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Particle Detector</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; overflow: hidden; font-family: 'Share Tech Mono', monospace; }
+
+        /* Camera feed — bottom-right */
+        #video-wrap {
+            position: fixed; bottom: 16px; right: 16px;
+            width: 200px; height: 150px;
+            border-radius: 10px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 20;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transform: scaleX(-1); }
+        #overlay { position: absolute; top:0; left:0; width:100%; height:100%; transform: scaleX(-1); }
+
+        /* Toggle panel — bottom-left */
+        #controls {
+            position: fixed; bottom: 16px; left: 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 30;
+        }
+        .ctrl-row { display: flex; align-items: center; gap: 10px; }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.15); flex-shrink: 0;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .toggle-btn {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.58rem; letter-spacing: 3px; text-transform: uppercase;
+            padding: 5px 12px; border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.3);
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px);
+            min-width: 120px;
+        }
+        .toggle-btn.on { color: #fff; background: rgba(255,255,255,0.05); }
+
+        /* per-feature accent colors */
+        #btn-eyes.on   { border-color: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.2); }
+        #btn-brows.on  { border-color: #ffdd44; box-shadow: 0 0 8px rgba(255,220,68,0.25); color: #ffdd44; }
+        #btn-lips.on   { border-color: #ff4488; box-shadow: 0 0 8px rgba(255,68,136,0.25); color: #ff88aa; }
+        #btn-face.on   { border-color: #44ffaa; box-shadow: 0 0 8px rgba(68,255,170,0.2);  color: #44ffaa; }
+        #btn-hands.on  { border-color: #4488ff; box-shadow: 0 0 8px rgba(68,136,255,0.25); color: #88aaff; }
+        #btn-pose.on   { border-color: #ff6600; box-shadow: 0 0 8px rgba(255,102,0,0.25);  color: #ff9944; }
+
+        #dot-eyes.on   { background: #ffffff; box-shadow: 0 0 6px #fff; }
+        #dot-brows.on  { background: #ffdd44; box-shadow: 0 0 6px #ffdd44; }
+        #dot-lips.on   { background: #ff4488; box-shadow: 0 0 6px #ff4488; }
+        #dot-face.on   { background: #44ffaa; box-shadow: 0 0 6px #44ffaa; }
+        #dot-hands.on  { background: #4488ff; box-shadow: 0 0 6px #4488ff; }
+        #dot-pose.on   { background: #ff6600; box-shadow: 0 0 6px #ff6600; }
+
+        /* Status */
+        #status {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+            font-size: 0.55rem; letter-spacing: 4px; text-transform: uppercase;
+            color: rgba(255,255,255,0.2); z-index: 30; pointer-events: none;
+        }
+
+        /* Grain overlay */
+        #grain {
+            position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0.3;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+        }
+    </style>
+
+    <script type="importmap">{ "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }}</script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="grain"></div>
+    <div id="status">Particle Detector — Initialising…</div>
+
+    <div id="video-wrap">
+        <video class="input_video" playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <div id="controls">
+        <div class="ctrl-row"><div class="dot" id="dot-eyes"></div><button class="toggle-btn" id="btn-eyes">◈ EYES</button></div>
+        <div class="ctrl-row"><div class="dot" id="dot-brows"></div><button class="toggle-btn" id="btn-brows">◈ EYEBROWS</button></div>
+        <div class="ctrl-row"><div class="dot" id="dot-lips"></div><button class="toggle-btn" id="btn-lips">◈ LIPS</button></div>
+        <div class="ctrl-row"><div class="dot" id="dot-face"></div><button class="toggle-btn" id="btn-face">◈ FACE</button></div>
+        <div class="ctrl-row"><div class="dot" id="dot-hands"></div><button class="toggle-btn" id="btn-hands">◈ HANDS</button></div>
+        <div class="ctrl-row"><div class="dot" id="dot-pose"></div><button class="toggle-btn" id="btn-pose">◈ POSE</button></div>
+    </div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // ── Scene ────────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    const cam   = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+    cam.position.z = 55;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    const composer  = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, cam));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.25, 0.92);
+    composer.addPass(bloom);
+
+    // ── Feature colors (THREE.Color) ─────────────────────────────
+    const C = {
+        eyes:    new THREE.Color(0xffffff),
+        brows:   new THREE.Color(0xffdd44),
+        lips:    new THREE.Color(0xff4488),
+        face:    new THREE.Color(0x44ffaa),
+        hands:   new THREE.Color(0x4488ff),
+        pose:    new THREE.Color(0xff6600),
+        neutral: new THREE.Color(0x334455),  // dim blue-grey for background
+    };
+
+    // ── Particle pool layout ─────────────────────────────────────
+    const POOLS = {
+        neutral: { n: 6000,  base: 0 },  // always-on background cloud
+        eyes:    { n: 3000,  base: 0 },
+        brows:   { n: 4000,  base: 0 },
+        lips:    { n: 3000,  base: 0 },
+        face:    { n: 5000,  base: 0 },
+        hands:   { n: 16000, base: 0 },
+        pose:    { n: 4000,  base: 0 },
+    };
+
+    let offset = 0;
+    for (const key of Object.keys(POOLS)) { POOLS[key].base = offset; offset += POOLS[key].n; }
+    const COUNT = offset;
+
+    const geometry = new THREE.BufferGeometry();
+    const posArr   = new Float32Array(COUNT * 3);
+    const colArr   = new Float32Array(COUNT * 3);
+    const szArr    = new Float32Array(COUNT);
+    const tPos     = new Float32Array(COUNT * 3);
+    const tCol     = new Float32Array(COUNT * 3);
+    const tSz      = new Float32Array(COUNT);
+
+    // Scatter initial positions
+    for (let i = 0, i3 = 0; i < COUNT; i++, i3 += 3) {
+        posArr[i3]   = (Math.random() - 0.5) * 6;
+        posArr[i3+1] = (Math.random() - 0.5) * 6;
+        posArr[i3+2] = (Math.random() - 0.5) * 6;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+    geometry.setAttribute('color',    new THREE.BufferAttribute(colArr, 3));
+    geometry.setAttribute('size',     new THREE.BufferAttribute(szArr,  1));
+
+    scene.add(new THREE.Points(geometry, new THREE.PointsMaterial({
+        size: 0.22, vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        transparent: true, depthWrite: false
+    })));
+
+    // ── Scatter helper ───────────────────────────────────────────
+    function scatter(poolKey) {
+        const { n, base } = POOLS[poolKey];
+        for (let i = 0; i < n; i++) {
+            const gi3 = (base + i) * 3;
+            tPos[gi3]   = (Math.random() - 0.5) * 90;
+            tPos[gi3+1] = (Math.random() - 0.5) * 90;
+            tPos[gi3+2] = (Math.random() - 0.5) * 90;
+            tCol[gi3] = tCol[gi3+1] = tCol[gi3+2] = 0;
+            tSz[base + i] = 0;
+        }
+    }
+
+    // Scatter all initially
+    for (const key of Object.keys(POOLS)) scatter(key);
+
+    // ── Generic particle writer ───────────────────────────────────
+    // Writes `points` (array of {x,y,z,r,g,b,s}) into a pool, cycling
+    // through the pool's slots so all N particles stay active.
+    function writePool(poolKey, points) {
+        const { n, base } = POOLS[poolKey];
+        const np = points.length;
+        if (np === 0) { scatter(poolKey); return; }
+
+        for (let i = 0; i < n; i++) {
+            const p   = points[i % np];
+            const gi  = base + i;
+            const gi3 = gi * 3;
+            tPos[gi3]   = p.x + (Math.random() - 0.5) * p.j;
+            tPos[gi3+1] = p.y + (Math.random() - 0.5) * p.j;
+            tPos[gi3+2] = p.z + (Math.random() - 0.5) * p.j * 0.5;
+            tCol[gi3]   = p.r;
+            tCol[gi3+1] = p.g;
+            tCol[gi3+2] = p.b;
+            tSz[gi]     = p.s;
+        }
+    }
+
+    const FSCALE = 60;
+    const HSCALE = 52;
+    const PSCALE = 55;
+    const H_OFF  = [-10.24, 10.24]; // -20% from 12.8
+
+    function fw(lm, scale = FSCALE)       { return { x: (0.5 - lm.x) * scale, y: (0.5 - lm.y) * scale * 0.9, z: -lm.z * scale * 0.3 }; }
+    function hw(lm, xOff, scale = HSCALE) { return { x: (0.5 - lm.x) * scale + xOff, y: (0.5 - lm.y) * scale * 0.9, z: -lm.z * scale * 0.5 }; }
+    function pw(lm, scale = PSCALE)       { return { x: (0.5 - lm.x) * scale, y: (0.5 - lm.y) * scale * 0.9, z: -lm.z * scale * 0.3 }; }
+
+    function pt(w, color, jitter = 0.4, size = 0.7) {
+        return { x: w.x, y: w.y, z: w.z, r: color.r, g: color.g, b: color.b, j: jitter, s: size };
+    }
+
+    // ── Face depth scale ─────────────────────────────────────────
+    // Computes a scale multiplier from face bounding box size:
+    // closer face → larger bbox → scale up particle spread so
+    // the plotted shape fills more of the screen proportionally.
+    function faceDepthScale(lms) {
+        // Use face oval extremes to estimate bounding box width
+        const xs = FACE_OVAL.map(i => lms[i].x);
+        const w  = Math.max(...xs) - Math.min(...xs);
+        // w ≈ 0.15 (far) … 0.55 (very close)
+        // Map to scale multiplier: 0.15 → 0.8×, 0.55 → 1.5×
+        return 0.8 + (w - 0.15) / 0.40 * 0.7;
+    }
+
+    // ── Neutral background cloud ─────────────────────────────────
+    // 6000 dim particles that idle in a slow drift field.
+    // When a feature activates, particles from their pool migrate
+    // out of the neutral cloud (the total count stays the same).
+    // We re-randomise their rest positions each call so they appear
+    // to vibrate/shimmer in place.
+    const NEUTRAL_BASE  = POOLS.neutral.base;
+    const NEUTRAL_N     = POOLS.neutral.n;
+    const neutralRestX  = new Float32Array(NEUTRAL_N);
+    const neutralRestY  = new Float32Array(NEUTRAL_N);
+    const neutralRestZ  = new Float32Array(NEUTRAL_N);
+
+    // Initial rest positions — spread across the full scene volume
+    for (let i = 0; i < NEUTRAL_N; i++) {
+        neutralRestX[i] = (Math.random() - 0.5) * 80;
+        neutralRestY[i] = (Math.random() - 0.5) * 60;
+        neutralRestZ[i] = (Math.random() - 0.5) * 40;
+    }
+
+    let neutralTime = 0;
+    function updateNeutral() {
+        neutralTime += 0.016;
+        const { base } = POOLS.neutral;
+        // Count how many feature pools are active to dim the neutral cloud
+        const activeCount = Object.keys(show).filter(k => show[k]).length;
+        const bright = Math.max(0.05, 0.18 - activeCount * 0.025);
+
+        for (let i = 0; i < NEUTRAL_N; i++) {
+            const gi3 = (base + i) * 3;
+            // Small sinusoidal vibration on top of rest position
+            const vib = 0.4;
+            tPos[gi3]   = neutralRestX[i] + Math.sin(neutralTime * 1.1 + i * 0.031) * vib;
+            tPos[gi3+1] = neutralRestY[i] + Math.cos(neutralTime * 0.9 + i * 0.027) * vib;
+            tPos[gi3+2] = neutralRestZ[i] + Math.sin(neutralTime * 0.7 + i * 0.019) * vib;
+            tCol[gi3]   = C.neutral.r * bright;
+            tCol[gi3+1] = C.neutral.g * bright;
+            tCol[gi3+2] = C.neutral.b * bright;
+            tSz[base + i] = 0.18;
+        }
+    }
+
+    // ── Face landmark index sets ──────────────────────────────────
+
+    // Eyes — contour rings
+    const L_EYE = [33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246];
+    const R_EYE = [362,382,381,380,374,373,390,249,263,466,388,387,386,385,384,398];
+    const L_IRIS = [474,475,476,477];
+    const R_IRIS = [469,470,471,472];
+
+    // Eyebrows
+    const L_BROW = [70,63,105,66,107,55,65,52,53,46];
+    const R_BROW = [300,293,334,296,336,285,295,282,283,276];
+
+    // Lips — outer + inner contours
+    const LIPS_OUTER = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146];
+    const LIPS_INNER = [78,191,80,81,82,13,312,311,310,415,308,324,318,402,317,14,87,178,88,95];
+
+    // Full face oval contour
+    const FACE_OVAL = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,
+                       152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+
+    function updateFace(lms, show) {
+        // Scale face particles based on how close the face is to camera
+        const ds = faceDepthScale(lms);
+        const scaledFw = (lm) => {
+            const s = FSCALE * ds;
+            return { x: (0.5 - lm.x) * s, y: (0.5 - lm.y) * s * 0.9, z: -lm.z * s * 0.3 };
+        };
+
+        // Eyes
+        if (show.eyes) {
+            const pts = [];
+            for (const idx of [...L_EYE, ...R_EYE])   { const w = scaledFw(lms[idx]); pts.push(pt(w, C.eyes, 0.25, 0.65)); }
+            for (const idx of [...L_IRIS, ...R_IRIS])  { const w = scaledFw(lms[idx]); pts.push(pt(w, C.eyes, 0.15, 1.3));  }
+            writePool('eyes', pts);
+        } else scatter('eyes');
+
+        // Eyebrows
+        if (show.brows) {
+            const pts = [];
+            for (const idx of [...L_BROW, ...R_BROW]) { const w = scaledFw(lms[idx]); pts.push(pt(w, C.brows, 0.3, 0.476)); }
+            writePool('brows', pts);
+        } else scatter('brows');
+
+        // Lips
+        if (show.lips) {
+            const pts = [];
+            for (const idx of [...LIPS_OUTER, ...LIPS_INNER]) { const w = scaledFw(lms[idx]); pts.push(pt(w, C.lips, 0.25, 0.75)); }
+            writePool('lips', pts);
+        } else scatter('lips');
+
+        // Face oval
+        if (show.face) {
+            const pts = [];
+            for (const idx of FACE_OVAL) { const w = scaledFw(lms[idx]); pts.push(pt(w, C.face, 0.3, 0.374)); }
+            writePool('face', pts);
+        } else scatter('face');
+    }
+
+    // ── Hand skeleton ────────────────────────────────────────────
+    const BONES = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
+    ];
+    const TIPS    = new Set([4,8,12,16,20]);
+    const PER_HAND = POOLS.hands.n >> 1; // 8000
+
+    function updateHands(landmarks, handedness, detected) {
+        // Stable slot: camera "Right" = user left → slot 0
+        const slotLm = [null, null];
+        if (detected === 1) {
+            slotLm[0] = landmarks[0];
+        } else {
+            for (let h = 0; h < detected; h++) {
+                const slot = handedness?.[h]?.label === 'Right' ? 0 : 1;
+                slotLm[slot] = landmarks[h];
+            }
+        }
+
+        const baseH = POOLS.hands.base;
+        for (let slot = 0; slot < 2; slot++) {
+            const lms  = slotLm[slot];
+            const xOff = detected === 1 ? 0 : H_OFF[slot];
+            const slotBase = baseH + slot * PER_HAND;
+
+            if (!lms) {
+                // Scatter this slot's particles
+                for (let i = 0; i < PER_HAND; i++) {
+                    const gi3 = (slotBase + i) * 3;
+                    tPos[gi3]   = (Math.random() - 0.5) * 90;
+                    tPos[gi3+1] = (Math.random() - 0.5) * 90;
+                    tPos[gi3+2] = (Math.random() - 0.5) * 90;
+                    tCol[gi3] = tCol[gi3+1] = tCol[gi3+2] = 0;
+                    tSz[slotBase + i] = 0;
+                }
+                continue;
+            }
+
+            // Build landmark point list for this hand
+            const pts = [];
+            for (let li = 0; li < 21; li++) {
+                const w = hw(lms[li], xOff);
+                const bright = TIPS.has(li) ? 1.5 : 0.85;
+                const sz     = TIPS.has(li) ? 1.8 : 0.85;
+                pts.push({ x: w.x, y: w.y, z: w.z,
+                           r: C.hands.r * bright, g: C.hands.g * bright, b: C.hands.b * bright,
+                           j: TIPS.has(li) ? 0.5 : 0.9, s: sz });
+            }
+            for (const [a, b] of BONES) {
+                const pA = hw(lms[a], xOff), pB = hw(lms[b], xOff);
+                const steps = 12;
+                for (let k = 0; k <= steps; k++) {
+                    const t = k / steps;
+                    pts.push({ x: pA.x + (pB.x - pA.x) * t, y: pA.y + (pB.y - pA.y) * t, z: pA.z + (pB.z - pA.z) * t,
+                               r: C.hands.r * 0.8, g: C.hands.g * 0.8, b: C.hands.b * 0.8,
+                               j: 0.3, s: 0.45 });
+                }
+            }
+
+            const np = pts.length;
+            for (let i = 0; i < PER_HAND; i++) {
+                const p   = pts[i % np];
+                const gi  = slotBase + i;
+                const gi3 = gi * 3;
+                tPos[gi3]   = p.x + (Math.random() - 0.5) * p.j;
+                tPos[gi3+1] = p.y + (Math.random() - 0.5) * p.j;
+                tPos[gi3+2] = p.z + (Math.random() - 0.5) * p.j * 0.5;
+                tCol[gi3]   = p.r; tCol[gi3+1] = p.g; tCol[gi3+2] = p.b;
+                tSz[gi]     = p.s;
+            }
+        }
+    }
+
+    // ── Pose skeleton ────────────────────────────────────────────
+    // Only upper-body landmarks (0–24) for a cleaner silhouette
+    const POSE_BONES = [
+        [11,12],[11,13],[13,15],[15,17],[15,19],[15,21], // left arm
+        [12,14],[14,16],[16,18],[16,20],[16,22],          // right arm
+        [11,23],[12,24],[23,24],                          // torso
+        [0,1],[1,2],[2,3],[3,7],                          // face left
+        [0,4],[4,5],[5,6],[6,8],                          // face right
+    ];
+    const POSE_LM_VISIBLE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]);
+
+    function updatePose(lms) {
+        const pts = [];
+        // Landmarks
+        for (const idx of POSE_LM_VISIBLE) {
+            const lm = lms[idx];
+            if (!lm || (lm.visibility !== undefined && lm.visibility < 0.4)) continue;
+            const w = pw(lm);
+            pts.push(pt(w, C.pose, 0.5, 1.0));
+        }
+        // Bones
+        for (const [a, b] of POSE_BONES) {
+            const lmA = lms[a], lmB = lms[b];
+            if (!lmA || !lmB) continue;
+            if ((lmA.visibility !== undefined && lmA.visibility < 0.4) ||
+                (lmB.visibility !== undefined && lmB.visibility < 0.4)) continue;
+            const wA = pw(lmA), wB = pw(lmB);
+            const steps = 16;
+            for (let k = 0; k <= steps; k++) {
+                const t = k / steps;
+                pts.push({ x: wA.x + (wB.x - wA.x) * t, y: wA.y + (wB.y - wA.y) * t, z: wA.z + (wB.z - wA.z) * t,
+                           r: C.pose.r * 0.85, g: C.pose.g * 0.85, b: C.pose.b * 0.85,
+                           j: 0.35, s: 0.45 });
+            }
+        }
+        writePool('pose', pts);
+    }
+
+    // ── Toggle state ─────────────────────────────────────────────
+    const show = { eyes: false, brows: false, lips: false, face: false, hands: false, pose: false };
+
+    const features = ['eyes','brows','lips','face','hands','pose'];
+    for (const key of features) {
+        document.getElementById(`btn-${key}`).addEventListener('click', () => {
+            show[key] = !show[key];
+            document.getElementById(`btn-${key}`).classList.toggle('on', show[key]);
+            document.getElementById(`dot-${key}`).classList.toggle('on', show[key]);
+            if (!show[key]) scatter(key);
+        });
+    }
+
+    // ── MediaPipe setup ──────────────────────────────────────────
+    const videoEl  = document.querySelector('.input_video');
+    const overlayEl = document.getElementById('overlay');
+    const ctx2d    = overlayEl.getContext('2d');
+    const statusEl = document.getElementById('status');
+
+    // FaceMesh
+    const faceMP = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+    faceMP.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    faceMP.onResults(({ multiFaceLandmarks }) => {
+        const anyFace = show.eyes || show.brows || show.lips || show.face;
+        if (multiFaceLandmarks?.length && anyFace) {
+            updateFace(multiFaceLandmarks[0], show);
+        } else {
+            if (!show.eyes)  scatter('eyes');
+            if (!show.brows) scatter('brows');
+            if (!show.lips)  scatter('lips');
+            if (!show.face)  scatter('face');
+        }
+    });
+
+    // Hands
+    const handsMP = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+    handsMP.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.65, minTrackingConfidence: 0.5 });
+    handsMP.onResults(({ multiHandLandmarks, multiHandedness }) => {
+        ctx2d.clearRect(0, 0, overlayEl.width, overlayEl.height);
+        const detected = multiHandLandmarks?.length ?? 0;
+
+        // Draw skeleton on overlay
+        if (detected && show.hands) {
+            for (let h = 0; h < detected; h++) {
+                drawConnectors(ctx2d, multiHandLandmarks[h], HAND_CONNECTIONS, { color: '#4488ff44', lineWidth: 1 });
+                drawLandmarks(ctx2d, multiHandLandmarks[h], { color: '#4488ff88', lineWidth: 1, radius: 1.5 });
+            }
+        }
+
+        const hints = [];
+        if (detected > 0) hints.push(`${detected} hand${detected>1?'s':''}`);
+        statusEl.innerText = hints.length ? hints.join(' · ') : 'No detection';
+
+        if (show.hands && detected > 0) updateHands(multiHandLandmarks, multiHandedness, detected);
+        else scatter('hands');
+    });
+
+    // Pose
+    const poseMP = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+    poseMP.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    poseMP.onResults(({ poseLandmarks }) => {
+        if (poseLandmarks && show.pose) updatePose(poseLandmarks);
+        else scatter('pose');
+    });
+
+    // ── Camera — single feed → all models ────────────────────────
+    const camUtils = new Camera(videoEl, {
+        onFrame: async () => {
+            overlayEl.width  = videoEl.videoWidth;
+            overlayEl.height = videoEl.videoHeight;
+
+            const needFace = show.eyes || show.brows || show.lips || show.face;
+            if (needFace)   await faceMP.send({ image: videoEl });
+            if (show.hands) await handsMP.send({ image: videoEl });
+            if (show.pose)  await poseMP.send({ image: videoEl });
+        },
+        width: 640, height: 480
+    });
+    camUtils.start();
+
+    // ── Render loop ───────────────────────────────────────────────
+    const LERP   = 0.5;
+    const COUNT3 = COUNT * 3;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        updateNeutral();
+        for (let i = 0; i < COUNT3; i++) {
+            posArr[i] += (tPos[i] - posArr[i]) * LERP;
+            colArr[i] += (tCol[i] - colArr[i]) * LERP;
+        }
+        for (let i = 0; i < COUNT; i++) szArr[i] += (tSz[i] - szArr[i]) * LERP;
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.color.needsUpdate    = true;
+        geometry.attributes.size.needsUpdate     = true;
+        composer.render();
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        cam.aspect = innerWidth / innerHeight;
+        cam.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+        composer.setSize(innerWidth, innerHeight);
+    });
+</script>
+</body>
+</html>
