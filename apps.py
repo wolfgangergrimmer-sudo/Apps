@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 from pathlib import Path
 
 st.set_page_config(page_title="My Projects", layout="wide")
-st.title("My Projects")
+# st.title("My Projects")
 
 root = Path(__file__).parent / "html_projects"
 root.mkdir(exist_ok=True)
