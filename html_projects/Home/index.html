@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opuslog | A running log of everything I've built</title>
+<meta name="description" content="Opuslog is a running log of my projects: what each one does, what it's built with, and where to try it.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Rajdhani:wght@500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07050F; --panel:#0E0A1F; --text:#E7E4FF; --muted:#9A93C7;
+  --pink:#FF2BD6; --cyan:#00F0FF; --lime:#D6FF3C; --line:#2A1F55;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; color:var(--text); background:var(--bg);
+  font:500 1.12rem/1.6 'Rajdhani',system-ui,sans-serif;
+  background-image:
+    radial-gradient(60rem 30rem at 85% -10%, rgba(255,43,214,.18), transparent 60%),
+    radial-gradient(50rem 28rem at -10% 20%, rgba(0,240,255,.14), transparent 60%);
+  background-attachment:fixed;
+}
+/* scanlines */
+body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:50;
+  background:repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,.18) 2px 3px)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
+.wrap{max-width:980px; margin:0 auto; padding:0 1.5rem; position:relative}
+h1,h2,h3{font-family:'Orbitron',sans-serif; margin:0; text-transform:uppercase; letter-spacing:.04em}
+
+nav{display:flex; justify-content:space-between; align-items:center; padding:1.4rem 0}
+nav .logo{font:900 1.15rem 'Orbitron',sans-serif; text-decoration:none; color:var(--cyan); text-shadow:0 0 12px var(--cyan)}
+nav ul{display:flex; gap:1.6rem; list-style:none; margin:0; padding:0}
+nav ul a{text-decoration:none; color:var(--muted); transition:color .15s, text-shadow .15s}
+nav ul a:hover{color:var(--pink); text-shadow:0 0 10px var(--pink)}
+
+/* hero */
+.hero{padding:3rem 0 4rem; display:grid; grid-template-columns:1.1fr 1fr; gap:2.5rem; align-items:center; position:relative}
+.hero::before{ /* neon grid floor */
+  content:""; position:absolute; left:-30%; right:-30%; bottom:0; height:55%; z-index:-1; opacity:.5;
+  background:
+    linear-gradient(var(--pink) 1px,transparent 1px) 0 0/100% 38px,
+    linear-gradient(90deg,var(--pink) 1px,transparent 1px) 0 0/60px 100%;
+  transform:perspective(380px) rotateX(62deg); transform-origin:bottom;
+  -webkit-mask-image:linear-gradient(transparent,#000); mask-image:linear-gradient(transparent,#000)}
+h1.brand{font-weight:900; font-size:clamp(3rem,10vw,6.2rem); line-height:1; letter-spacing:.02em;
+  color:var(--text); position:relative; text-shadow:0 0 18px var(--pink), 0 0 42px rgba(255,43,214,.6)}
+h1.brand::before,h1.brand::after{content:attr(data-text); position:absolute; inset:0; overflow:hidden}
+h1.brand::before{color:var(--cyan); text-shadow:none; left:3px; clip-path:inset(0 0 60% 0); animation:glitch 3.4s infinite steps(1)}
+h1.brand::after{color:var(--pink); text-shadow:none; left:-3px; clip-path:inset(60% 0 0 0); animation:glitch 3.4s infinite steps(1) reverse}
+@keyframes glitch{
+  0%,88%,100%{transform:translate(0)} 90%{transform:translate(-5px,2px)} 93%{transform:translate(5px,-2px)} 96%{transform:translate(-3px,0)}}
+.lede{max-width:34ch; margin:1.5rem 0 1.8rem; font-size:1.3rem; color:var(--muted)}
+.lede mark{background:none; color:var(--lime); text-shadow:0 0 10px rgba(214,255,60,.6)}
+.btn{display:inline-block; padding:.8rem 1.6rem; font:600 .95rem 'Orbitron',sans-serif; letter-spacing:.08em; text-transform:uppercase;
+  text-decoration:none; color:var(--bg); background:var(--cyan); box-shadow:0 0 18px rgba(0,240,255,.7);
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+  transition:background .15s, box-shadow .15s, transform .15s}
+.btn:hover{background:var(--pink); box-shadow:0 0 26px rgba(255,43,214,.9); transform:translateY(-2px)}
+
+/* terminal feed */
+.feed{background:var(--panel); border:1px solid var(--cyan); border-radius:4px;
+  box-shadow:0 0 0 1px rgba(0,240,255,.2), 0 0 28px rgba(0,240,255,.35), inset 0 0 30px rgba(0,240,255,.06)}
+.feed header{display:flex; justify-content:space-between; padding:.55rem 1rem; border-bottom:1px solid var(--line);
+  font:400 .8rem 'Share Tech Mono',monospace; color:var(--cyan)}
+.feed header i{display:inline-block; width:.5rem; height:.5rem; border-radius:50%; background:var(--lime);
+  box-shadow:0 0 8px var(--lime); margin-right:.5rem; animation:pulse 1.4s infinite}
+.feed ol{list-style:none; margin:0; padding:1rem; min-height:15.5rem; font:400 .9rem/1.75 'Share Tech Mono',monospace}
+.feed li{display:flex; gap:.8rem; color:var(--muted)}
+.feed li:last-child{color:var(--text)}
+.feed li time{color:var(--pink); flex:none}
+.cursor{display:inline-block; width:.55em; height:1.05em; background:var(--cyan); box-shadow:0 0 8px var(--cyan); vertical-align:-.2em; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}} @keyframes pulse{50%{opacity:.3}}
+
+/* stats */
+.stats{display:grid; grid-template-columns:repeat(3,1fr); border-block:1px solid var(--line)}
+.stats div{padding:1.3rem 0 1.3rem 1.2rem; border-left:1px solid var(--line)}
+.stats div:first-child{border-left:0; padding-left:0}
+.stats b{display:block; font:900 2.6rem/1 'Orbitron',sans-serif; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,.7)}
+.stats div:nth-child(2) b{color:var(--pink); text-shadow:0 0 14px rgba(255,43,214,.7)}
+.stats div:nth-child(3) b{color:var(--lime); text-shadow:0 0 14px rgba(214,255,60,.6)}
+.stats span{color:var(--muted)}
+
+/* ledger */
+section{padding:4.5rem 0 1rem}
+h2{font-weight:900; font-size:clamp(1.7rem,4.5vw,2.5rem); color:var(--text); text-shadow:0 0 14px rgba(0,240,255,.5)}
+.sub{color:var(--muted); max-width:52ch; margin:.6rem 0 1.6rem}
+.chips{display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem}
+.chip{font:600 .95rem 'Rajdhani',sans-serif; padding:.35rem .95rem; cursor:pointer; background:transparent; color:var(--muted);
+  border:1px solid var(--line); border-radius:2px; transition:all .15s}
+.chip:hover{color:var(--cyan); border-color:var(--cyan)}
+.chip[aria-pressed="true"]{color:var(--bg); background:var(--pink); border-color:var(--pink); box-shadow:0 0 14px rgba(255,43,214,.7)}
+
+.entry{border-top:1px solid var(--line)}
+.entry:last-child{border-bottom:1px solid var(--line)}
+.entry > button{all:unset; box-sizing:border-box; width:100%; cursor:pointer; display:grid;
+  grid-template-columns:4.5rem 1fr auto; gap:1rem; align-items:baseline; padding:1.3rem .6rem; transition:background .15s}
+.entry > button:focus-visible{outline:2px solid var(--cyan)}
+.entry:hover > button{background:rgba(0,240,255,.06)}
+.entry .yr{color:var(--pink); font:400 1rem 'Share Tech Mono',monospace}
+.entry h3{font-size:1.2rem; transition:color .15s, text-shadow .15s}
+.entry:hover h3,.entry[data-open="true"] h3{color:var(--cyan); text-shadow:0 0 10px rgba(0,240,255,.7)}
+.entry .plus{font-size:1.6rem; line-height:1; color:var(--cyan); transition:transform .25s}
+.entry[data-open="true"] .plus{transform:rotate(45deg)}
+.body{display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease}
+.entry[data-open="true"] .body{grid-template-rows:1fr}
+.body > div{overflow:hidden}
+.inner{padding:0 .6rem 1.6rem calc(4.5rem + 1.6rem)}
+.inner p{margin:0 0 1rem; max-width:58ch}
+.tag{display:inline-block; font:400 .82rem 'Share Tech Mono',monospace; padding:.1rem .6rem; margin:0 .4rem .4rem 0;
+  border:1px solid var(--cyan); color:var(--cyan); border-radius:2px}
+.status{font:400 .82rem 'Share Tech Mono',monospace; padding:.15rem .6rem; background:var(--lime); color:var(--bg); box-shadow:0 0 10px rgba(214,255,60,.5)}
+.status.wip{background:transparent; color:var(--muted); border:1px dashed var(--muted); box-shadow:none}
+.links a{margin-right:1.2rem; color:var(--pink); text-underline-offset:4px}
+.links a:hover{text-shadow:0 0 10px var(--pink)}
+.empty{padding:2rem 0; color:var(--muted)}
+
+/* about + contact */
+.about{display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:start}
+.about p{margin:0 0 1rem}
+.about strong{color:var(--lime)}
+.contact{border:1px solid var(--pink); background:var(--panel); padding:2rem; border-radius:4px;
+  box-shadow:0 0 28px rgba(255,43,214,.3), inset 0 0 30px rgba(255,43,214,.06)}
+.contact h3{font-size:1.3rem; margin-bottom:.6rem; text-shadow:0 0 12px rgba(255,43,214,.7)}
+.contact a{display:block; padding:.55rem 0; border-top:1px solid var(--line); text-decoration:none; transition:padding .15s, color .15s}
+.contact a:hover{padding-left:.5rem; color:var(--cyan); text-shadow:0 0 10px var(--cyan)}
+footer{padding:3.5rem 0 2.5rem; color:var(--muted); font:400 .85rem 'Share Tech Mono',monospace}
+
+@media (max-width:760px){
+  .hero,.about{grid-template-columns:1fr}
+  nav ul{gap:1rem}
+  .entry > button{grid-template-columns:3.4rem 1fr auto}
+  .inner{padding-left:.6rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important; transition:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav aria-label="Main">
+    <a class="logo" href="#top">Opuslog</a>
+    <ul>
+      <!-- <li><a href="#projects">Log</a></li> -->
+      <li><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <main id="top">
+    <div class="hero">
+      <div>
+        <h1 class="brand" data-text="Opuslog">Opuslog</h1>
+        <p class="lede">A running log of <mark>everything I've built</mark>, with what each project does and what it's made of.</p>
+        <a class="btn" href="#contact">Get in touch</a>
+      </div>
+
+      <aside class="feed" aria-label="Recent project log">
+        <header><span><i></i>opuslog.log</span><span>online</span></header>
+        <ol id="feed" aria-live="off"></ol>
+      </aside>
+    </div>
+
+    <div class="stats" id="stats"></div>
+<!--  
+    <section id="projects">
+      <h2>The log</h2>
+      <p class="sub">Newest first. Open any entry for the details, or filter by what it's built with.</p>
+      <div class="chips" id="chips" role="group" aria-label="Filter projects by tag"></div>
+      <div id="list"></div>
+    </section>
+  -->
+
+    <section id="about">
+      <div class="about">
+        <div><h2>About</h2></div>
+        <div>
+          <p>Hi, I'm <strong id="owner"></strong>. I build things, write down what I learn, and publish it here so it doesn't get lost in a folder.</p>
+          <p>Some entries are finished tools you can use today. Others are experiments still in progress. Both are logged.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="contact">
+        <h3>Want to work together?</h3>
+        <p style="margin:0 0 1rem;color:var(--muted)">If a project caught your eye, say hello.</p>
+        <a id="mail" href="#">Email</a>
+        <a id="gh" href="#" target="_blank" rel="noopener">GitHub</a>
+        <a id="li" href="#" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>&copy; <span id="yr"></span> Opuslog // built by hand, updated as I ship</footer>
+</div>
+
+<script>
+/* ============ EDIT THIS SECTION ============ */
+const OWNER  = "Aryan";
+const EMAIL  = "Mail";
+const GITHUB = "Placeholder for GitHub profile URL";
+const LINKEDIN = "Placeholder for LinkedIn profile URL";
+
+const PROJECTS = [
+  { title:"Project One",   date:"2026-03-02", status:"Live",
+    summary:"One or two sentences on what it does and who it helps.",
+    tags:["Python","Streamlit"], demo:"https://example.com", code:"https://github.com/your-username/project-one" },
+  { title:"Project Two",   date:"2025-11-18", status:"Live",
+    summary:"Describe the problem it solves and the result you got.",
+    tags:["Machine Learning","Pandas"], demo:"", code:"https://github.com/your-username/project-two" },
+  { title:"Project Three", date:"2025-06-09", status:"In progress",
+    summary:"What you're building and what's left to do.",
+    tags:["Data Analysis","SQL"], demo:"", code:"" }
+];
+/* ============================================ */
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+PROJECTS.sort((a,b) => b.date.localeCompare(a.date));
+
+$('owner').textContent = OWNER;
+$('yr').textContent = new Date().getFullYear();
+$('mail').href = 'mailto:' + EMAIL; $('mail').textContent = EMAIL;
+$('gh').href = GITHUB; $('li').href = LINKEDIN;
+
+// const live = PROJECTS.filter(p => p.status.toLowerCase() === 'live').length;
+const tagCount = new Set(PROJECTS.flatMap(p => p.tags)).size;
+const live = 0;
+$('stats').innerHTML = [
+  [PROJECTS.length, 'projects logged'],
+  [live, 'live right now'],
+  [tagCount, 'tools and topics']
+].map(([n,l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+
+/* typing log feed */
+const lines = [
+  ...PROJECTS.slice().reverse().map(p => [p.date, `${p.status === 'Live' ? 'shipped' : 'started'} ${p.title}`]),
+  [new Date().toISOString().slice(0,10), 'waiting for the next idea']
+];
+const feed = $('feed');
+function addLine(d, t, instant){
+  const li = document.createElement('li');
+  li.innerHTML = `<time>${esc(d)}</time><span></span>`;
+  const span = li.querySelector('span');
+  feed.appendChild(li);
+  while (feed.children.length > 6) feed.firstChild.remove();
+  if (instant){ span.textContent = t; return Promise.resolve(); }
+  const cur = document.createElement('i'); cur.className = 'cursor';
+  span.after(cur);
+  return new Promise(res => {
+    let i = 0;
+    const tick = () => {
+      span.textContent = t.slice(0, ++i);
+      if (i < t.length) setTimeout(tick, 45); else { cur.remove(); res(); }
+    };
+    tick();
+  });
+}
+(async function run(){
+  if (reduce){ lines.forEach(l => addLine(l[0], l[1], true)); return; }
+  for (;;){
+    for (const [d,t] of lines){ await addLine(d,t); await new Promise(r => setTimeout(r, 900)); }
+    await new Promise(r => setTimeout(r, 2500));
+    feed.innerHTML = '';
+  }
+})();
+
+/* ledger + filter */
+let active = null;
+const tags = [...new Set(PROJECTS.flatMap(p => p.tags))].sort();
+function renderChips(){
+  $('chips').innerHTML = ['All', ...tags].map(t => {
+    const on = (t === 'All' && !active) || t === active;
+    return `<button class="chip" aria-pressed="${on}" data-tag="${esc(t)}">${esc(t)}</button>`;
+  }).join('');
+}
+function renderList(){
+  const shown = PROJECTS.filter(p => !active || p.tags.includes(active));
+  if (!shown.length){ $('list').innerHTML = '<p class="empty">No projects match that tag yet.</p>'; return; }
+  $('list').innerHTML = shown.map((p,i) => {
+    const wip = p.status.toLowerCase() !== 'live';
+    const links = [p.demo && `<a href="${esc(p.demo)}" target="_blank" rel="noopener">Open project</a>`,
+                   p.code && `<a href="${esc(p.code)}" target="_blank" rel="noopener">View code</a>`].filter(Boolean).join('');
+    return `<article class="entry" data-open="false">
+      <button aria-expanded="false" aria-controls="b${i}">
+        <span class="yr">${esc(p.date.slice(0,4))}</span>
+        <h3>${esc(p.title)}</h3>
+        <span class="plus" aria-hidden="true">+</span>
+      </button>
+      <div class="body" id="b${i}"><div><div class="inner">
+        <p>${esc(p.summary)}</p>
+        <p><span class="status ${wip ? 'wip' : ''}">${esc(p.status)}</span></p>
+        <div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        <div class="links">${links}</div>
+      </div></div></div>
+    </article>`;
+  }).join('');
+}
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  active = b.dataset.tag === 'All' ? null : b.dataset.tag;
+  renderChips(); renderList();
+});
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('.entry > button'); if (!b) return;
+  const entry = b.parentElement, open = entry.dataset.open !== 'true';
+  entry.dataset.open = open; b.setAttribute('aria-expanded', open);
+});
+renderChips(); renderList();
+document.querySelector('.entry > button')?.click();
+</script>
+</body>
+</html>
