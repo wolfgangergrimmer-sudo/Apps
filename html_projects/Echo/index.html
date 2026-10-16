@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Echo Shift</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Instrument+Sans:wght@400;600&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
+--bg:#e6ebf5;--panel:#f8faff;--ink:#16203d;--mut:#55608a;--line:#c5cee6;--acc:#4338ca;--accink:#fff;--echo:#7c3aed}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0c1226;--panel:#151d3b;--ink:#e7ebfb;--mut:#9aa6d4;--line:#2b3665;--acc:#9ea0ff;--accink:#0c1226;--echo:#b794ff}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0c1226;--panel:#151d3b;--ink:#e7ebfb;--mut:#9aa6d4;--line:#2b3665;--acc:#9ea0ff;--accink:#0c1226;--echo:#b794ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 "Instrument Sans",system-ui,sans-serif;overflow-x:hidden}
+[hidden]{display:none!important}
+#app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px}
+.screen{width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;gap:14px}
+h1{font:800 clamp(2.4rem,9vw,4.4rem)/1 Unbounded,system-ui,sans-serif;margin:0;letter-spacing:-.03em;position:relative;isolation:isolate}
+h1 i{font-style:normal;color:var(--echo);opacity:.55;position:absolute;left:.09em;top:.09em;z-index:-1}
+.tag{max-width:46ch;text-align:center;color:var(--mut);margin:0}
+.btn{font:600 1rem "Instrument Sans",system-ui,sans-serif;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:10px 18px;cursor:pointer;transition:transform .08s,border-color .15s}
+.btn:hover:not(:disabled){border-color:var(--acc)}.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed}.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.pri{background:var(--acc);color:var(--accink);border-color:var(--acc);font-size:1.15rem;padding:12px 40px}
+.sm{padding:6px 12px;font-size:.9rem}
+.how{background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px;max-width:52ch;margin:0;color:var(--mut);font-size:.95rem}
+.how b{color:var(--ink)}
+#lvlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;width:100%}
+#lvlgrid .btn{text-align:left;display:flex;flex-direction:column}#lvlgrid small{color:var(--mut);font-weight:400}
+.top{display:flex;width:100%;align-items:center;gap:10px;justify-content:space-between}
+.top div{flex:1;text-align:center;min-width:0}.top b{font:600 1.05rem Unbounded,system-ui,sans-serif;display:block}
+#lhint{color:var(--mut);font-size:.9rem;display:block}
+#stage{position:relative;background:#0e1430;border-radius:14px;padding:10px;box-shadow:0 0 0 1.5px var(--line);width:100%;display:flex;justify-content:center}
+canvas{display:block;max-width:100%}
+#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:6px 14px;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+.hud{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;width:100%}
+.stat{color:var(--mut);font-size:.95rem;margin-right:8px}.stat b{color:var(--ink)}
+.keys{color:var(--mut);font-size:.85rem;text-align:center;margin:0}
+#win{position:fixed;inset:0;background:rgba(8,12,30,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.card{background:var(--panel);border-radius:16px;padding:26px 30px;text-align:center;max-width:380px;border:1.5px solid var(--line)}
+.card h2{font:800 1.6rem Unbounded,system-ui,sans-serif;margin:0 0 6px}.card p{color:var(--mut);margin:0 0 16px}
+.card .btn{margin:4px}
+@media (prefers-reduced-motion:no-preference){.card{animation:pop .25s ease-out}@keyframes pop{from{transform:scale(.92);opacity:0}}}
+</style>
+</head>
+<body>
+<div id="app">
+ <section id="title" class="screen">
+  <h1 style="white-space:nowrap">Echo Shift <i aria-hidden="true"> Echo Shift</i></h1>
+  <p class="tag">Record a run. Reset. Your past self replays it, and you cooperate with it to get out.</p>
+  <div><button id="play" class="btn pri">Play</button> <button id="levels" class="btn">Levels</button></div>
+  <div id="lvlgrid" hidden></div>
+  <p class="how"><b>Move</b> with WASD or arrow keys. <b>Space</b> waits a turn. Press <b>E</b> to turn the moves you just made into an echo: it replays them, one step for each step you take. Echoes and you can hold <b>switches</b> to open matching <b>doors</b>. Reach the green exit.</p>
+ </section>
+
+ <section id="game" class="screen" hidden>
+  <div class="top">
+   <button id="menu" class="btn sm">Menu</button>
+   <div><b id="lname"></b><span id="lhint"></span></div>
+   <button id="mute" class="btn sm">Sound on</button>
+  </div>
+  <div id="stage"><canvas id="cv" aria-label="Puzzle board"></canvas><div id="toast" role="status"></div></div>
+  <div class="hud">
+   <span class="stat">Actions <b id="acts">0</b></span>
+   <span class="stat">Echoes <b id="ecount">0/1</b></span>
+   <button id="mkecho" class="btn">Create echo (E)</button>
+   <button id="reset" class="btn">Reset run (R)</button>
+   <button id="clear" class="btn">Clear echoes (C)</button>
+  </div>
+  <p class="keys">WASD / arrows move · Space waits · E echo · R reset · C clear · M sound · Esc menu</p>
+ </section>
+</div>
+
+<div id="win" hidden>
+ <div class="card" role="dialog" aria-labelledby="wt">
+  <h2 id="wt">Room cleared</h2>
+  <p id="wp"></p>
+  <button id="next" class="btn pri">Next room</button>
+  <button id="again" class="btn">Replay</button>
+  <button id="wmenu" class="btn">Menu</button>
+ </div>
+</div>
+
+<script>
+/* ---------- levels.js ---------- */
+// # wall  P start  E exit  a/b switches  A/B matching doors
+const LEVELS=[
+{name:'First Trace',hint:'Reach the exit. R resets your run.',max:1,map:[
+'#########',
+'#P..#...#',
+'#...#.E.#',
+'#.......#',
+'#########']},
+{name:'Hold the Door',hint:'Walk to the switch, press E, then go through the door.',max:1,map:[
+'##########',
+'#P..#....#',
+'#.a.#.E..#',
+'#...A....#',
+'##########']},
+{name:'The Long Way',hint:'Echoes are slow. Space waits a turn: timing matters.',max:1,map:[
+'###########',
+'#P.....#..#',
+'#.####.#.E#',
+'#.#a...#..#',
+'#.####.A..#',
+'#.....#...#',
+'###########']},
+{name:'Two Timelines',hint:'The second echo needs the first one to open its path.',max:2,map:[
+'############',
+'#P.a#.b#...#',
+'#...A..B..E#',
+'#...#..#...#',
+'############']},
+{name:'The False Shortcut',hint:'Each echo opens the way for the next. Plan the order.',max:2,map:[
+'#############',
+'#P..#...#...#',
+'#...B.#.A.E.#',
+'#.b.#...#...#',
+'#############']}
+];
+// Fix level 5 so switch a sits in the middle room
+LEVELS[4].map=[
+'#############',
+'#P..#..a#...#',
+'#...B.#.A.E.#',
+'#.b.#...#...#',
+'#############'];
+
+/* ---------- save.js ---------- */
+const Save={k:'echoShift.v1',d:{unlocked:1,best:{}},
+ load(){try{const r=localStorage.getItem(this.k);if(r)Object.assign(this.d,JSON.parse(r))}catch(e){}},
+ store(){try{localStorage.setItem(this.k,JSON.stringify(this.d))}catch(e){}}};
+
+/* ---------- audio ---------- */
+const Snd={on:true,ctx:null,
+ t(f,d=.08,type='sine',v=.05,at=0){if(!this.on)return;try{this.ctx=this.ctx||new(window.AudioContext||window.webkitAudioContext)();const c=this.ctx,o=c.createOscillator(),g=c.createGain(),s=c.currentTime+at;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+d)}catch(e){}}};
+
+/* ---------- game.js (rules) ---------- */
+const $=id=>document.getElementById(id);
+const DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0],wait:[0,0]};
+const COL={a:'#34d3c4',b:'#f6ad55'};
+const G={screen:'title',echoes:[],open:{A:false,B:false}};
+
+function loadLevel(i){
+ const L=LEVELS[i];G.i=i;G.L=L;G.grid=L.map.map(r=>r.split(''));G.h=G.grid.length;G.w=G.grid[0].length;
+ G.sw={};G.dr={};
+ G.grid.forEach((row,y)=>row.forEach((c,x)=>{
+  if(c==='P'){G.start={x,y};row[x]='.'}
+  else if(/[ab]/.test(c))(G.sw[c]=G.sw[c]||[]).push({x,y});
+  else if(/[AB]/.test(c))(G.dr[c]=G.dr[c]||[]).push({x,y});
+ }));
+ G.echoes=[];resetRun();fit();
+}
+const tile=(x,y)=>(G.grid[y]&&G.grid[y][x])||'#';
+const solid=(x,y)=>{const c=tile(x,y);return c==='#'||(/[AB]/.test(c)&&!G.open[c])};
+const actors=()=>[G.p,...G.echoes];
+const occ=(x,y)=>actors().some(a=>a.x===x&&a.y===y);
+function updateDoors(sound){
+ ['A','B'].forEach(D=>{
+  if(!G.dr[D])return;
+  const s=(G.sw[D.toLowerCase()]||[]).some(p=>occ(p.x,p.y)),d=G.dr[D].some(p=>occ(p.x,p.y));
+  const n=s||d;
+  if(sound&&n!==G.open[D])Snd.t(n?680:200,.16,'triangle',.06);
+  G.open[D]=n;
+ });
+}
+function resetRun(){
+ const s=G.start;G.p={x:s.x,y:s.y,dx:s.x,dy:s.y};G.run=[];G.moves=0;G.won=false;
+ G.echoes.forEach(e=>{e.i=0;e.x=e.dx=s.x;e.y=e.dy=s.y});
+ updateDoors(false);syncUI();
+}
+function step(dir){
+ if(G.screen!=='game'||G.won)return;
+ if(dir!=='wait'){
+  const d=DIRS[dir],nx=G.p.x+d[0],ny=G.p.y+d[1];
+  if(solid(nx,ny)){Snd.t(110,.07,'square',.04);G.shake=7;return} // blocked moves are never recorded
+  G.p.x=nx;G.p.y=ny;
+ }
+ G.run.push(dir);G.moves++;
+ // every accepted move advances each echo by one recorded action (deterministic)
+ G.echoes.forEach(e=>{
+  if(e.i>=e.s.length)return;
+  const a=e.s[e.i++];if(a==='wait')return;
+  const d=DIRS[a];if(!solid(e.x+d[0],e.y+d[1])){e.x+=d[0];e.y+=d[1]}
+ });
+ updateDoors(true);
+ Snd.t(dir==='wait'?260:420+(G.moves%4)*20,.06,'sine',.04);
+ if(tile(G.p.x,G.p.y)==='E')win();
+ syncUI();
+}
+/* ---------- echo.js ---------- */
+function createEcho(){
+ if(!G.run.length)return toast('Make a move first: there is nothing to record.');
+ if(G.echoes.length>=G.L.max)return toast('Echo limit reached. Clear echoes (C) to start over.');
+ G.echoes.push({s:G.run.slice(),i:0,x:G.start.x,y:G.start.y,dx:G.start.x,dy:G.start.y});
+ Snd.t(520,.1,'sine',.06);Snd.t(780,.16,'sine',.06,.09);
+ resetRun();toast('Echo '+G.echoes.length+' created');
+}
+function clearEchoes(){if(!G.echoes.length)return;G.echoes=[];resetRun();toast('Echoes cleared')}
+function win(){
+ G.won=true;
+ const total=G.echoes.reduce((n,e)=>n+e.s.length,0)+G.moves;
+ const b=Save.d.best[G.i];if(!b||total<b)Save.d.best[G.i]=total;
+ Save.d.unlocked=Math.max(Save.d.unlocked,Math.min(G.i+2,LEVELS.length));Save.store();
+ [523,659,784,1046].forEach((f,k)=>Snd.t(f,.2,'triangle',.06,k*.09));
+ const last=G.i===LEVELS.length-1;
+ $('wt').textContent=last?'You escaped the echoes':'Room cleared';
+ $('wp').textContent='Actions used: '+total+' · Best: '+Save.d.best[G.i];
+ $('next').hidden=last;$('win').hidden=false;
+ (last?$('wmenu'):$('next')).focus();
+}
+
+/* ---------- renderer.js ---------- */
+const cv=$('cv');let ctx=cv.getContext('2d'),dpr=1,cell=48;
+function fit(){
+ if(!G.w)return;
+ dpr=window.devicePixelRatio||1;
+ const aw=Math.min($('stage').clientWidth||600,720)-20,ah=Math.max(window.innerHeight-300,220);
+ cell=Math.max(22,Math.min(64,Math.floor(Math.min(aw/G.w,ah/G.h))));
+ cv.width=cell*G.w*dpr;cv.height=cell*G.h*dpr;cv.style.width=cell*G.w+'px';cv.style.height=cell*G.h+'px';
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function draw(t){
+ if(G.screen!=='game'||!G.w)return;
+ const c=cell,lerp=a=>{a.dx+=(a.x-a.dx)*.3;a.dy+=(a.y-a.dy)*.3};
+ actors().forEach(lerp);
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+ let sx=0;if(G.shake>0){sx=(Math.random()-.5)*G.shake;G.shake*=.8;if(G.shake<.5)G.shake=0}
+ ctx.translate(sx,0);
+ for(let y=0;y<G.h;y++)for(let x=0;x<G.w;x++){
+  const ch=G.grid[y][x],px=x*c,py=y*c;
+  if(ch==='#'){ctx.fillStyle='#2b3566';ctx.fillRect(px,py,c,c);ctx.fillStyle='#3a4580';ctx.fillRect(px,py,c,c*.14);continue}
+  ctx.fillStyle=(x+y)%2?'#141b3a':'#111733';ctx.fillRect(px,py,c,c);
+  if(/[ab]/.test(ch)){
+   const lit=occ(x,y),k=COL[ch];
+   ctx.beginPath();ctx.arc(px+c/2,py+c/2,c*.3,0,7);ctx.fillStyle=lit?k:'#0a0f26';ctx.fill();
+   ctx.lineWidth=3;ctx.strokeStyle=k;ctx.stroke();
+   if(lit){ctx.globalAlpha=.25;ctx.beginPath();ctx.arc(px+c/2,py+c/2,c*.45+Math.sin(t/180)*2,0,7);ctx.fill();ctx.globalAlpha=1}
+  }else if(/[AB]/.test(ch)){
+   const k=COL[ch.toLowerCase()];
+   if(!G.open[ch]){ctx.fillStyle=k;ctx.globalAlpha=.9;rr(px+c*.12,py+c*.04,c*.76,c*.92,4);ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle='#0a0f26';ctx.lineWidth=2;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(px+c*.12,py+c*i/4);ctx.lineTo(px+c*.88,py+c*i/4);ctx.stroke()}}
+   else{ctx.strokeStyle=k;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.setLineDash([4,4]);rr(px+c*.12,py+c*.04,c*.76,c*.92,4);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
+  }else if(ch==='E'){
+   const p=.5+.5*Math.sin(t/300);ctx.fillStyle='#4ade80';ctx.globalAlpha=.25+.2*p;rr(px+c*.06,py+c*.06,c*.88,c*.88,8);ctx.fill();ctx.globalAlpha=1;
+   ctx.strokeStyle='#4ade80';ctx.lineWidth=3;rr(px+c*.2,py+c*.2,c*.6,c*.6,6);ctx.stroke();
+  }
+ }
+ G.echoes.forEach((e,n)=>{
+  const px=e.dx*c,py=e.dy*c;ctx.globalAlpha=.55+.15*Math.sin(t/300+n);
+  ctx.fillStyle='#a78bfa';rr(px+c*.16,py+c*.16,c*.68,c*.68,c*.2);ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle='#ddd6fe';ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#1e1b4b';ctx.font='700 '+c*.3+'px Instrument Sans,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n+1,px+c/2,py+c/2);
+ });
+ const p=G.p,px=p.dx*c,py=p.dy*c;
+ ctx.fillStyle='#e0f2fe';rr(px+c*.14,py+c*.14,c*.72,c*.72,c*.22);ctx.fill();
+ ctx.fillStyle='#0c4a6e';ctx.fillRect(px+c*.32,py+c*.38,c*.1,c*.2);ctx.fillRect(px+c*.58,py+c*.38,c*.1,c*.2);
+}
+(function loop(t){draw(t);requestAnimationFrame(loop)})(0);
+addEventListener('resize',fit);
+
+/* ---------- UI / input.js / screens ---------- */
+let tt;function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),1800)}
+function syncUI(){
+ if(!G.L)return;
+ $('acts').textContent=G.echoes.reduce((n,e)=>n+e.s.length,0)+G.moves;
+ $('ecount').textContent=G.echoes.length+'/'+G.L.max;
+ $('mkecho').disabled=!G.run.length||G.echoes.length>=G.L.max;
+ $('clear').disabled=!G.echoes.length;
+}
+function show(s){G.screen=s;$('title').hidden=s!=='title';$('game').hidden=s!=='game';$('win').hidden=true;if(s==='title')buildLevels()}
+function start(i){loadLevel(i);$('lname').textContent=(i+1)+'. '+G.L.name;$('lhint').textContent=G.L.hint;show('game');fit();syncUI()}
+function buildLevels(){
+ const g=$('lvlgrid');g.innerHTML='';
+ LEVELS.forEach((L,i)=>{const b=document.createElement('button');b.className='btn';b.disabled=i>=Save.d.unlocked;
+  b.innerHTML=(i+1)+'. '+L.name+'<small>'+(Save.d.best[i]?'Best '+Save.d.best[i]+' actions':i>=Save.d.unlocked?'Locked':'Not cleared')+'</small>';
+  b.onclick=()=>start(i);g.appendChild(b)});
+}
+$('play').onclick=()=>{Snd.t(400,.05);start(Math.min(Save.d.unlocked-1,LEVELS.length-1))};
+$('levels').onclick=()=>{$('lvlgrid').hidden=!$('lvlgrid').hidden};
+$('menu').onclick=()=>show('title');$('wmenu').onclick=()=>show('title');
+$('mkecho').onclick=createEcho;$('reset').onclick=()=>{resetRun();Snd.t(300,.08,'triangle')};$('clear').onclick=clearEchoes;
+$('next').onclick=()=>start(G.i+1);$('again').onclick=()=>start(G.i);
+$('mute').onclick=()=>{Snd.on=!Snd.on;$('mute').textContent=Snd.on?'Sound on':'Sound off'};
+const KEYS={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',' ':'wait'};
+addEventListener('keydown',e=>{
+ if(e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(G.screen==='game'){
+  if(!$('win').hidden){if(e.key==='Enter'&&!$('next').hidden)$('next').click();return}
+  if(KEYS[e.key]){e.preventDefault();step(KEYS[e.key]);return}
+  const k=e.key.toLowerCase();
+  if(k==='e')createEcho();else if(k==='r')resetRun();else if(k==='c')clearEchoes();
+  else if(k==='m')$('mute').click();else if(e.key==='Escape')show('title');
+ }
+});
+Save.load();buildLevels();
+</script>
+</body>
+</html>
